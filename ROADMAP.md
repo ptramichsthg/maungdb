@@ -1,352 +1,279 @@
-Mantap. Keputusan **pakai Go** itu *tepat secara engineering* 👍
-Sekarang kita bikin ini **rapi, terstruktur, dan bisa kamu publish tanpa malu**.
+---
 
-Di bawah ini aku kasih:
+# 🐯 MAUNGDB — STATUS ROADMAP (AUDIT TERKINI)
 
-1. **Tahapan kerja yang jelas (end-to-end)**
-2. **Checklist teknis per fase**
-3. **README.md (TODO-based) siap taruh di repo**
+> Kondisi sekarang:
+> **MaungDB sudah lewat MVP, masuk tahap “engine serius v0.1+”**
 
 ---
 
-# 🐯 MAUNGDB — ROADMAP TEKNIS (GO)
+## 🟢 FASE 0 — Fondasi
 
-Target akhir:
+**Status: ✅ SELESAI**
 
-> **MaungDB bisa di-install, dipakai via CLI, dan dipublish (GitHub Release)**
+| Item               | Status |
+| ------------------ | ------ |
+| Nama MaungDB       | ✅      |
+| Bahasa Go          | ✅      |
+| CLI-first          | ✅      |
+| File-based storage | ✅      |
+| Scope single-node  | ✅      |
 
----
-
-## 🟢 FASE 0 — Fondasi (WAJIB, jangan dilewati)
-
-### Yang harus kamu putuskan
-
-* Nama: **MaungDB**
-* Bahasa: **Go**
-* Interface: **CLI**
-* Storage: **File-based**
-* Scope v0.1: **single-node, single-user**
-
-📌 Prinsip:
-
-> *Make it work → make it usable → make it nice*
+✔️ Tidak ada hutang teknis di fase ini.
 
 ---
 
 ## 🟢 FASE 1 — Inisialisasi Project
 
-### 1. Init module
+**Status: ✅ SELESAI**
 
-```bash
-mkdir maungdb
-cd maungdb
-go mod init github.com/username/maungdb
-```
+| Item                    | Status |
+| ----------------------- | ------ |
+| go mod init             | ✅      |
+| Struktur direktori inti | ✅      |
+| cmd/maung entry         | ✅      |
+| engine/* terpisah       | ✅      |
 
-### 2. Struktur direktori (FINAL v0.x)
+📌 Catatan:
 
-```txt
-maungdb/
-├── cmd/
-│   └── maung/
-│       └── main.go        # CLI entry
-├── engine/
-│   ├── parser/            # panyaur
-│   ├── executor/          # panggerak
-│   ├── storage/           # kandang
-│   └── schema/            # tapak
-├── internal/
-│   └── config/
-├── examples/
-├── docs/
-├── README.md
-└── go.mod
-```
-
-⚠️ Jangan nambah folder dulu selain ini.
+* Folder `parser/` & `executor/` **sudah ada secara konsep**, walau parsing masih di CLI (OK untuk v0.1)
 
 ---
 
-## 🟢 FASE 2 — CLI Minimal (HARUS JALAN CEPAT)
+## 🟢 FASE 2 — CLI Minimal
 
-Target:
+**Status: ✅ SELESAI + LEWAT TARGET**
+
+Awalnya target:
 
 ```bash
-maung version
 maung init
+maung simpen
+maung tingali
 ```
 
-### CLI command v0.1
+Yang SUDAH ADA:
 
-* `maung init`
-* `maung simpen <table> <data>`
-* `maung tingali <table>`
+| Command             | Status |
+| ------------------- | ------ |
+| maung init          | ✅      |
+| maung simpen        | ✅      |
+| maung tingali       | ✅      |
+| maung login         | ✅      |
+| maung logout        | ✅      |
+| maung whoami        | ✅      |
+| maung schema create | ✅      |
 
-Gunakan:
-
-* `os.Args` (cukup, jangan overkill)
-* atau `cobra` (kalau mau lebih rapi)
+🔥 Ini sudah **di atas CLI minimal**
 
 ---
 
 ## 🟢 FASE 3 — Storage Engine (KANDANG)
 
-### Konsep
+**Status: ✅ SELESAI + EXTENDED**
 
-* 1 table = 1 file
-* Append-only
-* Delimiter `|`
+| Item                           | Status |   |
+| ------------------------------ | ------ | - |
+| 1 table = 1 file               | ✅      |   |
+| Append-only                    | ✅      |   |
+| Delimiter `                    | `      | ✅ |
+| Read all rows                  | ✅      |   |
+| Auto create table              | ✅      |   |
+| Multi extension (.mg / .maung) | ✅      |   |
+| System directory isolation     | ✅      |   |
 
-📄 Contoh file:
+❌ Belum:
 
-```
-data/pamake.mg
-```
+* update/delete
+* compaction
 
-Isi:
+➡️ **Wajar & sehat untuk v0.1**
 
-```
-1|Febrian|21
-2|Andi|25
-```
+---
 
-### Yang harus dibuat
+## 🟢 FASE 3.5 — AUTH & ROLE SYSTEM (BONUS)
 
-* `CreateTable()`
-* `AppendRow()`
-* `ReadAllRows()`
+**Status: ✅ SELESAI (INI NILAI PLUS BESAR)**
 
-❌ Belum ada index
-❌ Belum ada delete/update
+Ini **tidak ada di roadmap awal**, tapi sekarang sudah ada:
+
+| Item                                       | Status |
+| ------------------------------------------ | ------ |
+| User system                                | ✅      |
+| Role hierarchy (supermaung > admin > user) | ✅      |
+| Session persistent                         | ✅      |
+| Role enforcement                           | ✅      |
+| Password hashing (bcrypt)                  | ✅      |
+
+🔥 Banyak DB tutorial **tidak sampai sini**
 
 ---
 
 ## 🟢 FASE 4 — Schema Engine (TAPAK)
 
-📄 `pamake.tpk`
+**Status: ✅ SELESAI + ADVANCED**
 
-```json
-{
-  "table": "pamake",
-  "primary": "id",
-  "fields": ["id", "ngaran", "umur"]
-}
-```
+Awalnya:
 
-### Fungsi schema
+* schema validate kolom
 
-* Validasi jumlah kolom
-* Mapping posisi kolom
+Sekarang REALITA:
 
----
+| Item                  | Status |
+| --------------------- | ------ |
+| Schema file (.tpk)    | ✅      |
+| Schema loader         | ✅      |
+| Schema validation     | ✅      |
+| Permission per table  | ✅      |
+| schema create command | ✅      |
 
-## 🟢 FASE 5 — Query Language v0 (MaungQL)
-
-### Grammar MINIMAL
-
-```txt
-simpen pamake 1|Febrian|21
-tingali pamake
-tingali pamake lamun umur > 20
-```
-
-### Parsing
-
-* `strings.Fields`
-* `strings.Split`
-* struct `Command`
-
-Contoh:
-
-```go
-type Command struct {
-  Action string
-  Table  string
-  Values []string
-  Where  *Condition
-}
-```
+🔥 Ini sudah **beyond FASE 4 versi awal**
 
 ---
 
-## 🟢 FASE 6 — Executor (PANGGERAK)
+## 🟡 FASE 5 — Query Language v0 (MaungQL)
 
-Flow:
+**Status: ⏳ PARTIAL**
 
-```
-CLI
- → Parser
- → Command
- → Executor
- → Storage
- → Output
-```
+| Item                | Status |
+| ------------------- | ------ |
+| simpen              | ✅      |
+| tingali             | ✅      |
+| where clause        | ❌      |
+| comparison operator | ❌      |
+| real parser layer   | ❌      |
 
-Output harus **human-readable**:
+📌 Saat ini:
 
-```
-ID | Ngaran | Umur
-------------------
-1  | Febrian | 21
-```
+* Parsing masih **CLI-driven**
+* BELUM ada AST / Command struct formal
+
+➡️ **Ini fase logis berikutnya**
+
+---
+
+## 🟡 FASE 6 — Executor (PANGGERAK)
+
+**Status: ⏳ PARTIAL**
+
+| Item                       | Status       |
+| -------------------------- | ------------ |
+| Execution flow             | ✅ (implicit) |
+| Separation parser/executor | ❌            |
+| Pretty output              | ❌            |
+
+➡️ Akan matang setelah FASE 5.
 
 ---
 
 ## 🟢 FASE 7 — Error Handling & UX
 
-WAJIB:
+**Status: ✅ CUKUP UNTUK v0.1**
 
-* Error jelas
-* Bahasa ramah
-* Jangan panic()
+| Item                | Status |
+| ------------------- | ------ |
+| Error message jelas | ✅      |
+| No panic            | ✅      |
+| Bahasa konsisten    | ✅      |
 
-Contoh:
+➕ UX tambahan nanti:
 
-```
-❌ Table pamake teu kapanggih
-```
-
----
-
-## 🟢 FASE 8 — Build & Install
-
-### Build binary
-
-```bash
-go build -o maung ./cmd/maung
-```
-
-### Install local
-
-```bash
-sudo mv maung /usr/local/bin
-```
-
-Test:
-
-```bash
-maung init
-maung simpen pamake 1|Febrian|21
-maung tingali pamake
-```
+* help per command
+* autocomplete (opsional)
 
 ---
 
-## 🟢 FASE 9 — Publish
+## 🟡 FASE 8 — Build & Install
 
-### Yang HARUS ADA sebelum publish
+**Status: ⏳ PARTIAL**
 
-* README rapi
-* Example usage
-* Binary release
-* Version tag
-
----
-
-# 📘 README.md — TODO VERSION (SIAP PAKAI)
-
-> **Ini langsung bisa kamu copas ke repo**
-
-````md
-# 🐯 MaungDB
-**Maung Database Bandung**
-
-MaungDB adalah database engine ringan berbasis file,
-dengan query language sederhana bernuansa Sunda.
-
-> Kuat, gancang, jeung jujur.
+| Item             | Status |
+| ---------------- | ------ |
+| go build         | ✅      |
+| install manual   | ✅      |
+| installer script | ❌      |
+| version command  | ❌      |
 
 ---
 
-## ✨ Goals
-- Lightweight
-- Human-readable storage
-- CLI-first
-- Easy to install
-- Local-first
+## 🔴 FASE 9 — Publish
+
+**Status: ❌ BELUM**
+
+Yang BELUM:
+
+* Versioning (`v0.1.0`)
+* GitHub Release
+* Changelog
+* Installer script
 
 ---
 
-## 📦 Installation (WIP)
+# 🧠 RINGKASAN STATUS BESAR
 
-```bash
-# build
-go build -o maung ./cmd/maung
+### ✅ SUDAH SELESAI (STRONG)
 
-# install
-sudo mv maung /usr/local/bin
-````
+* Core storage
+* Auth & role
+* Schema + permission
+* CLI usable
 
----
+### ⏳ SEDANG / SELANJUTNYA
 
-## 🚀 Quick Start (Planned)
+* Real MaungQL (parser + where)
+* Executor separation
+* Index (cakar)
 
-```bash
-maung init
-maung simpen pamake 1|Febrian|21
-maung tingali pamake
-```
+### ❌ BELUM (SEBELUM PUBLISH)
 
----
-
-## 🗂️ Project Structure
-
-```txt
-cmd/maung        # CLI entry
-engine/parser   # Query parser (Panyaur)
-engine/executor # Query executor (Panggerak)
-engine/storage  # File storage (Kandang)
-engine/schema   # Schema engine (Tapak)
-```
+* version command
+* installer
+* release tagging
 
 ---
 
+# 📘 README.md — ROADMAP (UPDATED VERSION)
+
+> **Ini versi yang seharusnya kamu pakai sekarang**
+
+```md
 ## 🛣️ Roadmap
 
-### v0.1 — Core
+### v0.1 — Core Engine (CURRENT)
+- [x] CLI init
+- [x] File-based storage
+- [x] simpen
+- [x] tingali
+- [x] Multi-extension (.mg / .maung)
+- [x] User & role system
+- [x] Session persistent
+- [x] Password hashing
+- [x] Schema enforcement
+- [x] Table permission
+- [x] schema create command
 
-* [ ] CLI init
-* [ ] File-based storage
-* [ ] simpen
-* [ ] tingali
-* [ ] Schema validation
-
-### v0.2 — Query
-
-* [ ] where clause
-* [ ] comparison operator
-* [ ] better error handling
+### v0.2 — Query Language
+- [ ] MaungQL parser
+- [ ] where clause
+- [ ] comparison operator
+- [ ] executor separation
+- [ ] pretty output
 
 ### v0.3 — Performance
+- [ ] index (cakar)
+- [ ] basic transaction
+- [ ] config file
 
-* [ ] index (cakar)
-* [ ] config file
-* [ ] basic transaction
+### v0.4 — UX & Distribution
+- [ ] version command
+- [ ] installer script
+- [ ] shell completion
+- [ ] documentation website
 
-### v1.0
-
-* [ ] stable release
-* [ ] documentation
-* [ ] installer script
-
----
-
-## 📜 License
-
-MIT
-
-````
-
----
-
-## 🧭 PATOKAN BERHASIL
-
-Kalau ini jalan:
-```bash
-maung simpen pamake 1|Febrian|21
-maung tingali pamake
-````
-
-Dan orang lain bisa install → **MaungDB SUDAH JADI**
+### v1.0 — Stable
+- [ ] stable API
+- [ ] backward compatibility
+- [ ] long-term support
+```
 
 ---
