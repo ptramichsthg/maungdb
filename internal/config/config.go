@@ -3,6 +3,7 @@ package config
 var (
 	DataDir   = "maung_data"
 	SystemDir = "_system"
+	SchemaDir = "_schema"
 
 	AllowedExt = []string{".mg", ".maung"}
 

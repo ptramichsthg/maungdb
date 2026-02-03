@@ -6,6 +6,8 @@ import (
 
 	"github.com/febrd/maungdb/engine/auth"
 	"github.com/febrd/maungdb/engine/storage"
+	"github.com/febrd/maungdb/engine/schema"
+
 )
 
 func main() {
@@ -90,6 +92,28 @@ func simpen() {
 		return
 	}
 
+	user, err := auth.CurrentUser()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	s, err := schema.Load(os.Args[2])
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	if !s.Can(user.Role, "write") {
+		fmt.Println("❌ teu boga hak nulis ka table ieu")
+		return
+	}
+
+	if err := s.ValidateRow(os.Args[3]); err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
 	if err := storage.Append(os.Args[2], os.Args[3]); err != nil {
 		fmt.Println("❌", err)
 		return
@@ -101,6 +125,23 @@ func simpen() {
 func tingali() {
 	if len(os.Args) < 3 {
 		fmt.Println("❌ format: maung tingali <table>")
+		return
+	}
+
+	user, err := auth.CurrentUser()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	s, err := schema.Load(os.Args[2])
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	if !s.Can(user.Role, "read") {
+		fmt.Println("❌ teu boga hak maca table ieu")
 		return
 	}
 

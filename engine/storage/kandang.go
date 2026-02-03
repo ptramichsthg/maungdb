@@ -22,6 +22,12 @@ func Init() error {
 		return err
 	}
 
+	// schema dir
+	schemaPath := filepath.Join(config.DataDir, config.SchemaDir)
+	if err := os.MkdirAll(schemaPath, 0755); err != nil {
+		return err
+	}
+
 	// init default user
 	return initDefaultUser(systemPath)
 }
