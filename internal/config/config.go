@@ -3,6 +3,7 @@ package config
 var (
 	DataDir   = "maung_data"
 	SystemDir = "_system"
+	SchemaDir = "_schema"
 
 	AllowedExt = []string{".mg", ".maung"}
 
@@ -15,4 +16,6 @@ var (
 		"admin":      1,
 		"user":       2,
 	}
+
+	SessionFile = "session.maung"
 )

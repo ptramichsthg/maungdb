@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-
+	"strings"
 	"github.com/febrd/maungdb/engine/auth"
 	"github.com/febrd/maungdb/engine/storage"
+	"github.com/febrd/maungdb/engine/schema"
+
+
 )
 
 func main() {
@@ -23,6 +26,12 @@ func main() {
 	case "login":
 		login()
 
+	case "logout":
+		logout()
+	
+	case "whoami":
+		whoami()
+	
 	case "simpen":
 		require("user")
 		simpen()
@@ -31,6 +40,10 @@ func main() {
 		require("user")
 		tingali()
 
+	case "schema":
+		require("admin")
+		schemaCmd()
+	
 	default:
 		help()
 	}
@@ -43,9 +56,37 @@ func require(role string) {
 	}
 }
 
-// =======================
-// COMMANDS
-// =======================
+func schemaCmd() {
+	if len(os.Args) < 4 || os.Args[2] != "create" {
+		fmt.Println("❌ format: maung schema create <table> <field1,field2> --read=a,b --write=c,d")
+		return
+	}
+
+	table := os.Args[3]
+	fields := strings.Split(os.Args[4], ",")
+
+	perms := map[string][]string{
+		"read":  {"user", "admin", "supermaung"},
+		"write": {"admin", "supermaung"},
+	}
+
+	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "--read=") {
+			perms["read"] = strings.Split(strings.TrimPrefix(arg, "--read="), ",")
+		}
+		if strings.HasPrefix(arg, "--write=") {
+			perms["write"] = strings.Split(strings.TrimPrefix(arg, "--write="), ",")
+		}
+	}
+
+	if err := schema.Create(table, fields, perms); err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	fmt.Println("✅ schema dijieun pikeun table:", table)
+}
+
 
 func help() {
 	fmt.Println("🐯 MaungDB")
@@ -67,7 +108,11 @@ func login() {
 		return
 	}
 
-	user := auth.CurrentUser()
+	user, err := auth.CurrentUser()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
 	fmt.Printf("✅ login salaku %s (%s)\n", user.Username, user.Role)
 }
 
@@ -86,6 +131,28 @@ func simpen() {
 		return
 	}
 
+	user, err := auth.CurrentUser()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	s, err := schema.Load(os.Args[2])
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	if !s.Can(user.Role, "write") {
+		fmt.Println("❌ teu boga hak nulis ka table ieu")
+		return
+	}
+
+	if err := s.ValidateRow(os.Args[3]); err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
 	if err := storage.Append(os.Args[2], os.Args[3]); err != nil {
 		fmt.Println("❌", err)
 		return
@@ -100,6 +167,23 @@ func tingali() {
 		return
 	}
 
+	user, err := auth.CurrentUser()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	s, err := schema.Load(os.Args[2])
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+
+	if !s.Can(user.Role, "read") {
+		fmt.Println("❌ teu boga hak maca table ieu")
+		return
+	}
+
 	rows, err := storage.ReadAll(os.Args[2])
 	if err != nil {
 		fmt.Println("❌", err)
@@ -109,4 +193,21 @@ func tingali() {
 	for _, r := range rows {
 		fmt.Println(r)
 	}
+}
+
+func logout() {
+	if err := auth.Logout(); err != nil {
+		fmt.Println("❌ can logout:", err)
+		return
+	}
+	fmt.Println("✅ logout hasil")
+}
+
+func whoami() {
+	user, err := auth.CurrentUser()
+	if err != nil {
+		fmt.Println("❌", err)
+		return
+	}
+	fmt.Printf("👤 %s (%s)\n", user.Username, user.Role)
 }
