@@ -59,7 +59,7 @@
       transition: transform 0.3s ease-in-out;
     }
 
-    /* Desktop: Sidebar always visible, relative positioning handled by margin in main */
+    /* Desktop: Sidebar always visible */
     @media (min-width: 769px) {
       .sidebar {
         position: relative;
@@ -327,6 +327,8 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
+      max-height: 500px;
+      overflow-y: auto;
     }
     .syntax-item {
       padding-bottom: 12px;
@@ -342,6 +344,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.8rem;
       margin-bottom: 4px;
+      font-weight: 600;
     }
 
     /* OVERLAY FOR MOBILE */
@@ -502,22 +505,51 @@
             </div>
 
             <div class="syntax-card">
-              <h4 style="margin-top: 0; color: var(--primary);">Cheat Sheet</h4>
+              <h4 style="margin-top: 0; color: var(--primary);">Kamus MaungQL v2</h4>
+              
               <div class="syntax-item">
-                <span class="code-pill">tingali &lt;table&gt;</span>
-                <div style="font-size: 0.85rem; color: var(--text-muted);">View all data</div>
+                <span class="code-pill">TINGALI &lt;tbl&gt;</span>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">View data (SELECT)</div>
               </div>
+              
               <div class="syntax-item">
-                <span class="code-pill">simpen &lt;table&gt; val|val</span>
+                <span class="code-pill">SIMPEN &lt;tbl&gt; val|val</span>
                 <div style="font-size: 0.85rem; color: var(--text-muted);">Insert data</div>
               </div>
+
               <div class="syntax-item">
-                <span class="code-pill">dimana col = val</span>
+                <span class="code-pill">OMEAN &lt;tbl&gt; JADI c=v</span>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Update data</div>
+              </div>
+
+              <div class="syntax-item">
+                <span class="code-pill">MICEUN TI &lt;tbl&gt;</span>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Delete data</div>
+              </div>
+
+              <div class="syntax-item">
+                <span class="code-pill">DIMANA col = val</span>
                 <div style="font-size: 0.85rem; color: var(--text-muted);">Filter (Where)</div>
               </div>
+
               <div class="syntax-item">
                 <span class="code-pill">DAN / ATAU</span>
                 <div style="font-size: 0.85rem; color: var(--text-muted);">Logic operators</div>
+              </div>
+
+              <div class="syntax-item">
+                <span class="code-pill">RUNTUYKEUN &lt;col&gt;</span>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR/HANDAP)</div>
+              </div>
+
+              <div class="syntax-item">
+                <span class="code-pill">SAKADAR &lt;n&gt;</span>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Limit rows</div>
+              </div>
+
+              <div class="syntax-item">
+                <h5 style="margin:5px 0; color:var(--primary);">Data Types</h5>
+                <span style="font-size: 0.8rem; font-family:monospace; color:#4f46e5;">INT, FLOAT, BOOL, STRING, TEXT, DATE, CHAR(n), ENUM(a,b)</span>
               </div>
             </div>
           </div>
@@ -529,7 +561,7 @@
             <form onsubmit="event.preventDefault(); buildAndSubmitSchema();">
               <div class="form-group">
                 <label>Table Name</label>
-                <input type="text" id="builderTableName" placeholder="e.g. students" required>
+                <input type="text" id="builderTableName" placeholder="e.g. products" required>
               </div>
 
               <label style="display:block; margin-bottom: 10px; font-weight: 500;">Columns</label>
@@ -537,8 +569,12 @@
                 <div class="col-row">
                   <input type="text" placeholder="Column Name" class="col-name" required style="flex: 2;">
                   <select class="col-type" style="flex: 1;">
-                    <option value="int">INT (Number)</option>
-                    <option value="string">STRING (Text)</option>
+                    <option value="int">INT (Angka)</option>
+                    <option value="float">FLOAT (Desimal)</option>
+                    <option value="string">STRING (Teks Pendek)</option>
+                    <option value="text">TEXT (Teks Panjang)</option>
+                    <option value="bool">BOOL (True/False)</option>
+                    <option value="date">DATE (YYYY-MM-DD)</option>
                   </select>
                   <button type="button" class="btn-icon" disabled style="opacity: 0.5;">×</button>
                 </div>
@@ -564,7 +600,16 @@
   <script src="/static/js/auth.js"></script>
 
   <script>
-    // --- UI LOGIC ---
+    // --- 1. PERSISTENCE HELPERS (Penyimpanan Lokal) ---
+    function saveState(key, value) {
+      localStorage.setItem(key, value);
+    }
+
+    function loadState(key) {
+      return localStorage.getItem(key);
+    }
+
+    // --- 2. UI LOGIC ---
 
     function toggleSidebar() {
       const sidebar = document.querySelector('.sidebar');
@@ -585,7 +630,9 @@
       if(index >= 0) document.querySelectorAll('.nav-item')[index].classList.add('active');
     }
 
+    // --- 3. ON LOAD (Restore Data saat Refresh) ---
     window.onload = async () => {
+      // A. Cek Login
       const msg = await whoami();
       if(msg) {
         document.getElementById('userName').innerText = "Haii"; 
@@ -593,13 +640,66 @@
         const colors = ['#f59e0b', '#10b981', '#6366f1', '#ec4899'];
         document.querySelector('.user-avatar').style.background = colors[Math.floor(Math.random() * colors.length)];
       }
+
+      // B. Restore Active Database
+      const lastDB = loadState('maung_active_db');
+      if (lastDB && lastDB !== 'null') {
+        // Update UI
+        document.getElementById('dbIndicator').classList.add('active');
+        document.getElementById('activeDBName').innerText = lastDB;
+        
+        // Panggil Server agar session sync kembali
+        try {
+          await API.post("/db/use", { database: lastDB });
+          console.log("✅ Session restored for DB:", lastDB);
+        } catch (e) {
+          console.warn("Gagal restore session DB");
+        }
+      }
+
+      // C. Restore Statistik (Counter)
+      const savedTables = loadState('maung_stat_tables') || 0;
+      document.getElementById('statTables').innerText = savedTables;
+
+      const savedQueries = loadState('maung_stat_queries') || 0;
+      document.getElementById('statQueries').innerText = savedQueries;
+
+      // D. Animasi Chart
       document.querySelectorAll('.chart-col').forEach(col => {
         const randomH = Math.floor(Math.random() * 60) + 20;
         col.style.height = randomH + '%';
       });
     };
 
-    // --- SCHEMA BUILDER LOGIC ---
+    // --- 4. HOOKS (Intercept Fungsi untuk Simpan Data) ---
+
+    // Hook: Saat Query Dijalankan -> Simpan Counter
+    const originalRunQuery = window.runQuery;
+    window.runQuery = async function() {
+      await originalRunQuery();
+      
+      // Update & Simpan Counter
+      let qCount = parseInt(document.getElementById('statQueries').innerText);
+      let newCount = qCount + 1;
+      document.getElementById('statQueries').innerText = newCount;
+      saveState('maung_stat_queries', newCount);
+    }
+
+    // Hook: Saat Pilih Database -> Simpan Nama DB
+    // (Asumsi doUseDB ada di db.js, kita override sedikit logikanya)
+    const originalDoUseDB = window.doUseDB;
+    window.doUseDB = async function() {
+      // Panggil fungsi asli
+      await originalDoUseDB();
+      
+      // Cek apakah berhasil berubah di UI
+      const currentDB = document.getElementById('activeDBName').innerText;
+      if (currentDB && currentDB !== 'No Database Selected' && currentDB !== 'Belum dipilih') {
+        saveState('maung_active_db', currentDB);
+      }
+    }
+
+    // --- 5. SCHEMA BUILDER LOGIC ---
     function addNewColumnRow() {
       const container = document.getElementById('columnsContainer');
       const div = document.createElement('div');
@@ -607,8 +707,12 @@
       div.innerHTML = `
         <input type="text" placeholder="Column Name" class="col-name" required style="flex: 2;">
         <select class="col-type" style="flex: 1;">
-          <option value="int">INT (Number)</option>
-          <option value="string">STRING (Text)</option>
+          <option value="int">INT (Angka)</option>
+          <option value="float">FLOAT (Desimal)</option>
+          <option value="string">STRING (Teks Pendek)</option>
+          <option value="text">TEXT (Teks Panjang)</option>
+          <option value="bool">BOOL (True/False)</option>
+          <option value="date">DATE (YYYY-MM-DD)</option>
         </select>
         <button type="button" class="btn-icon" onclick="this.parentElement.remove()">×</button>
       `;
@@ -619,7 +723,7 @@
       const tableName = document.getElementById('builderTableName').value;
       const rows = document.querySelectorAll('.col-row');
       const alertBox = document.getElementById('schemaBuilderAlert');
-      const insertContainer = document.getElementById('insertDataContainer'); // Ambil container insert
+      const insertContainer = document.getElementById('insertDataContainer'); 
       
       let fieldsArray = [];
       rows.forEach(row => {
@@ -632,33 +736,58 @@
 
       if (res.success) {
         alertBox.innerHTML = `<div class="alert alert-success">✅ Table <b>${tableName}</b> created! Now you can insert data below.</div>`;
-        let count = parseInt(document.getElementById('statTables').innerText);
-        document.getElementById('statTables').innerText = count + 1;
         
-        // --- CALL INSERT FORM GENERATOR ---
+        // Update & Simpan Counter Tabel
+        let count = parseInt(document.getElementById('statTables').innerText);
+        let newCount = count + 1;
+        document.getElementById('statTables').innerText = newCount;
+        saveState('maung_stat_tables', newCount);
+        
+        // Generate Form Insert
         generateInsertForm(tableName, fieldsArray);
 
       } else {
         alertBox.innerHTML = `<div class="alert alert-error">❌ ${res.error}</div>`;
-        insertContainer.style.display = 'none'; // Sembunyikan jika error
+        insertContainer.style.display = 'none';
       }
     }
 
-    // --- NEW: GENERATE INSERT FORM ---
+    // --- 6. INSERT FORM GENERATOR ---
     function generateInsertForm(tableName, fields) {
       const container = document.getElementById('insertDataContainer');
-      container.style.display = 'block'; // Show container
+      container.style.display = 'block'; 
       
       let inputsHtml = '';
       fields.forEach((field, index) => {
         const [colName, colType] = field.split(':');
-        // Tentukan tipe input HTML: number untuk INT, text untuk STRING
-        const inputType = colType === 'int' ? 'number' : 'text';
+        let inputType = 'text';
+        let placeholder = `Value for ${colName}`;
+        let stepAttr = '';
+
+        if (colType === 'int') {
+            inputType = 'number';
+        } else if (colType === 'float') {
+            inputType = 'number';
+            stepAttr = 'step="0.01"';
+        } else if (colType === 'date') {
+            inputType = 'date';
+        } else if (colType === 'bool') {
+            inputsHtml += `
+              <div class="form-group">
+                <label style="font-size:0.85rem; color:var(--text-muted);">${colName} <span style="font-size:0.7em; text-transform:uppercase; opacity:0.7;">(BOOL)</span></label>
+                <select class="insert-input" required>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                </select>
+              </div>
+            `;
+            return; 
+        }
         
         inputsHtml += `
           <div class="form-group">
             <label style="font-size:0.85rem; color:var(--text-muted);">${colName} <span style="font-size:0.7em; text-transform:uppercase; opacity:0.7;">(${colType})</span></label>
-            <input type="${inputType}" class="insert-input" placeholder="Value for ${colName}" required>
+            <input type="${inputType}" ${stepAttr} class="insert-input" placeholder="${placeholder}" required>
           </div>
         `;
       });
@@ -677,16 +806,10 @@
       `;
     }
 
-    // --- NEW: SUBMIT INSERT DATA ---
     async function submitInsertData(tableName) {
        const inputs = document.querySelectorAll('.insert-input');
-       // Ambil value dari setiap input
        const values = Array.from(inputs).map(input => input.value);
-       
-       // Gabungkan dengan delimiter pipe '|' sesuai format MaungDB
        const dataString = values.join('|');
-       
-       // Susun query simpen
        const query = `simpen ${tableName} ${dataString}`;
        
        const resultDiv = document.getElementById('insertResult');
@@ -696,22 +819,20 @@
        
        if(res.success) {
           resultDiv.innerHTML = `<div class="alert alert-success">✅ Data inserted successfully!</div>`;
-          // Clear inputs agar bisa input data baru lagi
-          inputs.forEach(input => input.value = '');
+          inputs.forEach(input => {
+              if(input.tagName === 'SELECT') input.selectedIndex = 0;
+              else input.value = '';
+          });
           
-          // Update stats query counter
+          // Update Query Stats juga saat insert via form
           let qCount = parseInt(document.getElementById('statQueries').innerText);
-          document.getElementById('statQueries').innerText = qCount + 1;
+          let newCount = qCount + 1;
+          document.getElementById('statQueries').innerText = newCount;
+          saveState('maung_stat_queries', newCount);
+
        } else {
           resultDiv.innerHTML = `<div class="alert alert-error">❌ ${res.error}</div>`;
        }
-    }
-
-    const originalRunQuery = window.runQuery;
-    window.runQuery = async function() {
-      await originalRunQuery();
-      let qCount = parseInt(document.getElementById('statQueries').innerText);
-      document.getElementById('statQueries').innerText = qCount + 1;
     }
   </script>
 </body>

@@ -151,3 +151,27 @@ func initDefaultUser(systemPath string) error {
 	return os.WriteFile(userFile, []byte(line), 0644)
 }
 
+
+// Anyar: Rewrite (Nulis ulang kabeh data table)
+func Rewrite(table string, rows []string) error {
+	u, err := auth.CurrentUser()
+	if err != nil {
+		return err
+	}
+	
+	path, err := tablePath(u.Database, table)
+	if err != nil {
+		return err
+	}
+
+	// Gabungkeun deui jadi string panjang
+	content := strings.Join(rows, "\n")
+	
+	// Tulis (Overwrite file lama)
+	// Mun rows kosong, tulis string kosong (truncate)
+	if len(rows) > 0 {
+		content += "\n" // Tambah newline di akhir
+	}
+
+	return os.WriteFile(path, []byte(content), 0644)
+}
