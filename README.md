@@ -1,3 +1,5 @@
+![MaungDB Logo](https://i.ibb.co.com/nMbKL85p/Gemini-Generated-Image-a4fvs9a4fvs9a4fv.png)
+
 # 🐯 MaungDB
 
 **MaungDB** is a lightweight, fast, and MaungDB embraces local wisdom with syntax based on the Sundanese language (`SIMPEN`, `TINGALI`, `OMEAN`) yet remains powerful with modern *Type System*, *RBAC Security*, and a *Web Dashboard UI*.
