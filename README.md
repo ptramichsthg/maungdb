@@ -78,7 +78,7 @@ sudo mv maung /usr/local/bin/
 
 ```
 
-### ⚡ System Initialization
+### System Initialization
 
 Before use, initialize the system data folder (maung cage):
 
@@ -92,7 +92,7 @@ maung init
 
 ---
 
-## 📖 User Guide
+## User Guide
 
 MaungDB features a **Role-Based Access Control (RBAC)** system:
 
