@@ -17,7 +17,7 @@
 ### 🎥 Video Demo
 *(Silakan klik gambar di bawah untuk memutar video demo)*
 
-[![MaungDB Demo](https://img.youtube.com/vi/YOUR_VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=YOUR_VIDEO_ID)
+[![MaungDB Demo](https://img.youtube.com/vi/J4IThAnQjWo/0.jpg)](https://www.youtube.com/watch?v=J4IThAnQjWo)
 
 > *Ganti `YOUR_VIDEO_ID` dengan ID video YouTube demo Anda.*
 
