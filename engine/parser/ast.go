@@ -10,12 +10,14 @@ const (
 type Command struct {
 	Type  CommandType
 	Table string
-	Data  string      
-	Where *Condition 
+	Data  string
+	// Where ayeuna jadi slice (bisa loba kondisi)
+	Where []Condition
 }
 
 type Condition struct {
 	Field    string
 	Operator string
 	Value    string
+	LogicOp  string // "SARENG", "ATAU", atawa kosong (mun kondisi terakhir)
 }

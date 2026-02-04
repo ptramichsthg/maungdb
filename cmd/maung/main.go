@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/febrd/maungdb/internal/config"
 	"github.com/febrd/maungdb/engine/auth"
 	"github.com/febrd/maungdb/engine/executor"
 	"github.com/febrd/maungdb/engine/parser"
@@ -18,6 +19,8 @@ func main() {
 		return
 	}
 
+	// Cek lamun argumen ka-1 ngandung spasi (berarti query langsung)
+	// Conto: maung "tingali users"
 	if strings.Contains(os.Args[1], " ") {
 		runQueryFromString(os.Args[1])
 		return
@@ -30,7 +33,7 @@ func main() {
 
 	case "cli":
 		startShell()
-	
+
 	case "login":
 		login()
 
@@ -71,6 +74,17 @@ func main() {
 		require("supermaung")
 		listUserCmd()
 
+	case "version", "-v", "--version":
+		fmt.Printf("🐯 MaungDB %s\n", config.Version)
+		return
+
+	case "server":
+        port := "7070"
+        if len(os.Args) > 2 {
+            port = os.Args[2]
+        }
+        startServer(port)
+		
 	default:
 		help()
 	}
@@ -150,7 +164,6 @@ func listUserCmd() {
 	}
 }
 
-
 func createDB() {
 	if len(os.Args) < 3 {
 		fmt.Println("❌ format: maung createdb <database>")
@@ -229,7 +242,7 @@ func schemaCmd() {
 
 //
 // =======================
-// QUERY (FASE 5 & 6)
+// QUERY (FASE 6.5 FIX)
 // =======================
 //
 
@@ -260,9 +273,7 @@ func runQuery() {
 		return
 	}
 
-	for _, row := range result {
-		fmt.Println(row)
-	}
+	printResult(result)
 }
 
 func runQueryFromString(query string) {
@@ -283,18 +294,67 @@ func runQueryFromString(query string) {
 		return
 	}
 
-	rows, err := executor.Execute(cmd)
+	result, err := executor.Execute(cmd)
 	if err != nil {
 		fmt.Println("❌", err)
 		return
 	}
 
-	for _, r := range rows {
-		fmt.Println(r)
-	}
+	printResult(result)
 }
 
+// Ganti fungsi printResult ku ieu:
+func printResult(result *executor.ExecutionResult) {
+	if result.Message != "" {
+		fmt.Println(result.Message)
+		return
+	}
 
+	if len(result.Columns) == 0 {
+		return
+	}
+
+	// 1. Itung lebar
+	widths := make([]int, len(result.Columns))
+	for i, col := range result.Columns {
+		widths[i] = len(col)
+	}
+	for _, row := range result.Rows {
+		for i, val := range row {
+			if len(val) > widths[i] {
+				widths[i] = len(val)
+			}
+		}
+	}
+
+	// Helper separator
+	printSeparator := func() {
+		fmt.Print("+")
+		for _, w := range widths {
+			fmt.Print(strings.Repeat("-", w+2) + "+")
+		}
+		fmt.Println()
+	}
+
+	// 2. Header
+	printSeparator()
+	fmt.Print("|")
+	for i, col := range result.Columns {
+		fmt.Printf(" %-*s |", widths[i], col)
+	}
+	fmt.Println()
+	printSeparator()
+
+	// 3. Rows
+	for _, row := range result.Rows {
+		fmt.Print("|")
+		for i, val := range row {
+			fmt.Printf(" %-*s |", widths[i], val)
+		}
+		fmt.Println()
+	}
+	printSeparator()
+}
 //
 // =======================
 // AUTH COMMANDS
@@ -334,9 +394,9 @@ func whoami() {
 	db := user.Database
 	if db == "" {
 		db = "-"
-	}
-
-	fmt.Printf("👤 %s (%s) | db: %s\n", user.Username, user.Role, db)
+    }
+    
+    fmt.Printf("👤 %s (%s) | db: %s\n", user.Username, user.Role, db)
 }
 
 //
@@ -346,28 +406,29 @@ func whoami() {
 //
 
 func initDB() {
-	if err := storage.Init(); err != nil {
-		fmt.Println("❌ gagal init:", err)
-		return
-	}
-	fmt.Println("✅ MaungDB siap dipaké")
-	fmt.Println("👤 default user: maung / maung (supermaung)")
+    if err := storage.Init(); err != nil {
+        fmt.Println("❌ gagal init:", err)
+        return
+    }
+    fmt.Println("MaungDB siap Di angge")
+    fmt.Println("Default user: maung / maung (supermaung)")
 }
 
 func help() {
-	fmt.Println("🐯 MaungDB")
-	fmt.Println("Paréntah:")
-	fmt.Println("  maung init")
-	fmt.Println("  maung createuser <name> <pass> <role>")
-	fmt.Println("  maung login <user> <pass>")
-	fmt.Println("  maung setdb <user> <db1,db2>")
-	fmt.Println("  maung passwd <user> <newpass>")
-	fmt.Println("  maung listuser")
-	fmt.Println("  maung logout")
-	fmt.Println("  maung whoami")
-	fmt.Println("  maung createdb <database>")
-	fmt.Println("  maung use <database>")
-	fmt.Println("  maung schema create <table> <fields>")
-	fmt.Println("  maung simpen <table> <data>")
-	fmt.Println("  maung tingali <table> [dimana <field> <op> <value>]")
+    fmt.Println("MaungDB Cheat Sheet")
+    fmt.Println("Paréntah: (Lamun di CLI ulah pake maung)")
+    fmt.Println("  maung init")
+	fmt.Println("  maung server <port> (default: 7070)")
+    fmt.Println("  maung createuser <name> <pass> <role>")
+    fmt.Println("  maung login <user> <pass>")
+    fmt.Println("  maung setdb <user> <db1,db2>")
+    fmt.Println("  maung passwd <user> <newpass>")
+    fmt.Println("  maung listuser")
+    fmt.Println("  maung logout")
+    fmt.Println("  maung whoami")
+    fmt.Println("  maung createdb <database>")
+    fmt.Println("  maung use <database>")
+	fmt.Println("  maung schema create <table> <field:type,field:type>")
+    fmt.Println("  maung simpen <table> <data>")
+    fmt.Println("  maung tingali <table> [dimana <field> <op> <value>]")
 }
