@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
+	"os"
+	"io"
 	"github.com/febrd/maungdb/engine/auth"
 	"github.com/febrd/maungdb/engine/executor"
 	"github.com/febrd/maungdb/engine/parser"
@@ -49,18 +50,14 @@ type APIResponse struct {
 
 type CreateSchemaRequest struct {
 	Table  string   `json:"table"`
-	Fields []string `json:"fields"` // PENTING: Tipe datana []string (Array)
+	Fields []string `json:"fields"` 
 }
-// ===========================
-// Server Entry Point
-// ===========================
 
 func startServer(port string) {
 	if err := storage.Init(); err != nil {
 		panic(err)
 	}
 
-	// ---- API ROUTES ----
 	http.HandleFunc("/auth/login", handleLogin)
 	http.HandleFunc("/auth/logout", handleLogout)
 	http.HandleFunc("/auth/whoami", handleWhoami)
@@ -71,7 +68,9 @@ func startServer(port string) {
 	http.HandleFunc("/schema/create", handleSchemaCreate)
 	http.HandleFunc("/query", handleQuery)
 
-	// ---- EMBEDDED WEB UI ----
+	http.HandleFunc("/db/export", handleExport)
+	http.HandleFunc("/db/import", handleImport)
+
 	serveWebUI()
 
 	fmt.Println("🐯 MaungDB Server running")
@@ -83,9 +82,6 @@ func startServer(port string) {
 	}
 }
 
-// ===========================
-// Helpers
-// ===========================
 
 func setupHeader(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -107,9 +103,6 @@ func sendSuccess(w http.ResponseWriter, msg string, data *executor.ExecutionResu
 	})
 }
 
-// ===========================
-// AUTH HANDLERS
-// ===========================
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	setupHeader(w)
@@ -175,9 +168,6 @@ func handleWhoami(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-// ===========================
-// DATABASE HANDLERS
-// ===========================
 
 func handleCreateDB(w http.ResponseWriter, r *http.Request) {
 	setupHeader(w)
@@ -270,15 +260,13 @@ func handleSchemaCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Panggil Logic Schema Create (Engine)
-	// Catatan: Permissions default diset
+
 	perms := map[string][]string{
 		"read":  {"user", "admin", "supermaung"},
 		"write": {"admin", "supermaung"},
 	}
 
-	// Panggil schema.Create (fungsi anu di engine)
-	// Pastikan import "github.com/febrd/maungdb/engine/schema" tos aya
+
 	if err := schema.Create(user.Database, req.Table, req.Fields, perms); err != nil {
 		sendError(w, "Gagal nyieun schema: "+err.Error())
 		return
@@ -287,9 +275,6 @@ func handleSchemaCreate(w http.ResponseWriter, r *http.Request) {
 	sendSuccess(w, fmt.Sprintf("✅ Schema tabel '%s' parantos didamel!", req.Table), nil)
 }
 
-// ===========================
-// QUERY HANDLER
-// ===========================
 
 func handleQuery(w http.ResponseWriter, r *http.Request) {
 	setupHeader(w)
@@ -333,4 +318,82 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendSuccess(w, "Query Berhasil", result)
+}
+
+// HANDLER EXPORT (Download CSV)
+func handleExport(w http.ResponseWriter, r *http.Request) {
+    // CORS Setup (Penting buat browser)
+    w.Header().Set("Access-Control-Allow-Origin", "*")
+    if r.Method == "OPTIONS" { return }
+
+    // Ambil parameter tabel dari URL ?table=nama_tabel
+    table := r.URL.Query().Get("table")
+    if table == "" {
+        http.Error(w, "Parameter 'table' wajib diisi", http.StatusBadRequest)
+        return
+    }
+
+    // Panggil fungsi storage
+    filePath, err := storage.ExportCSV(table)
+    if err != nil {
+        http.Error(w, "Gagal export: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Set Header supaya browser download file
+    w.Header().Set("Content-Disposition", "attachment; filename="+table+".csv")
+    w.Header().Set("Content-Type", "text/csv")
+    http.ServeFile(w, r, filePath)
+    
+    // Opsional: Hapus file CSV temp saenggeus dikirim (bersih-bersih)
+    // os.Remove(filePath) 
+}
+
+// HANDLER IMPORT (Upload CSV)
+func handleImport(w http.ResponseWriter, r *http.Request) {
+    setupHeader(w)
+    if r.Method != "POST" { return }
+
+    // 1. Parse Multipart Form (Max 10MB)
+    if err := r.ParseMultipartForm(10 << 20); err != nil {
+        sendError(w, "File terlalu besar")
+        return
+    }
+
+    // 2. Ambil file dari form
+    file, _, err := r.FormFile("csv_file")
+    if err != nil {
+        sendError(w, "Gagal maca file")
+        return
+    }
+    defer file.Close()
+
+    tableName := r.FormValue("table")
+    if tableName == "" {
+        sendError(w, "Ngaran tabel kosong")
+        return
+    }
+
+    // 3. Simpen file upload ka temp
+    tempFile, err := os.CreateTemp("", "upload-*.csv")
+    if err != nil {
+        sendError(w, "Gagal nyieun temp file")
+        return
+    }
+    defer os.Remove(tempFile.Name()) // Hapus mun beres
+
+    // Copy eusi file
+    if _, err := io.Copy(tempFile, file); err != nil {
+        sendError(w, "Gagal nyalin file")
+        return
+    }
+
+    // 4. Proses Import ka Storage
+    count, err := storage.ImportCSV(tableName, tempFile.Name())
+    if err != nil {
+        sendError(w, "Gagal import: "+err.Error())
+        return
+    }
+
+    sendSuccess(w, fmt.Sprintf("✅ Suksés import %d baris data ka tabel '%s'", count, tableName), nil)
 }

@@ -6,75 +6,293 @@ import (
 	"strings"
 )
 
-func Parse(input string) (*Command, error) {
-	tokens := strings.Fields(input)
-	if len(tokens) < 2 {
-		return nil, errors.New("query teu valid")
+// Parse adalah gerbang utama untuk memproses query string menjadi Command struct
+func Parse(query string) (*Command, error) {
+	query = strings.TrimSpace(query)
+	// Hapus ; di akhir jika ada
+	query = strings.TrimSuffix(query, ";")
+
+	tokens := strings.Fields(query)
+	if len(tokens) == 0 {
+		return nil, errors.New("query kosong")
 	}
 
-	switch strings.ToUpper(tokens[0]) {
-	case "DAMEL":
-  		return parseCreate(tokens)
-	case "SIMPEN":
+	verb := strings.ToUpper(tokens[0])
+
+	switch verb {
+	case "DAMEL", "BIKIN", "NYIEUN", "SCHEMA", "LAHAN":
+		if len(tokens) > 1 && strings.ToUpper(tokens[1]) == "CREATE" {
+			return parseCreate(tokens[2:])
+		}
+		return parseCreate(tokens)
+	case "SIMPEN", "TENDEUN", "INSERT":
 		return parseInsert(tokens)
-	case "TINGALI":
+	case "TINGALI", "TENJO", "SELECT":
 		return parseSelect(tokens)
-	case "OMEAN":
+	case "OMEAN", "ROBIH", "UPDATE":
 		return parseUpdate(tokens)
-	case "MICEUN":
+	case "MICEUN", "PICEUN", "DELETE":
 		return parseDelete(tokens)
 	default:
-		return nil, errors.New("paréntah teu dikenal")
+		return nil, errors.New("paréntah teu dikenal: " + verb)
 	}
 }
 
+// ==========================================
+// 1. CREATE (DAMEL)
+// ==========================================
 func parseCreate(tokens []string) (*Command, error) {
-    if len(tokens) < 3 {
-        return nil, errors.New("format: DAMEL <tabel> <definisi_kolom>")
-    }
-    return &Command{
-        Type: CmdCreate,
-        Table: tokens[1],
-        Data: tokens[2], 
-    }, nil
+	// Format: DAMEL <tabel> <definisi_kolom>
+	if len(tokens) < 2 {
+		return nil, errors.New("format: DAMEL <tabel> <definisi_kolom>")
+	}
+	
+	// Jika ada token ke-3 dst, gabungkan jadi satu string data
+	dataPart := ""
+	if len(tokens) >= 2 {
+		dataPart = strings.Join(tokens[1:], "")
+	}
+
+	return &Command{
+		Type:  CmdCreate,
+		Table: tokens[0],
+		Data:  dataPart,
+	}, nil
 }
 
-func parseUpdate(tokens []string) (*Command, error) {
-	if len(tokens) < 4 || strings.ToUpper(tokens[2]) != "JADI" {
-		return nil, errors.New("format OMEAN salah: OMEAN <table> JADI <col>=<val> DIMANA ...")
+// ==========================================
+// 2. INSERT (SIMPEN)
+// ==========================================
+func parseInsert(tokens []string) (*Command, error) {
+	// Format: SIMPEN <tabel> <val|val|val>
+	if len(tokens) < 3 {
+		return nil, errors.New("format simpen salah: SIMPEN <table> <data>")
 	}
+	// Gabung sisa token (bisi aya spasi dina string data)
+	dataPart := strings.Join(tokens[2:], " ")
+	return &Command{
+		Type:  CmdInsert,
+		Table: tokens[1],
+		Data:  dataPart,
+	}, nil
+}
 
-	pairs := strings.Split(tokens[3], "=")
-	if len(pairs) != 2 {
-		return nil, errors.New("format update salah, gunakeun col=val")
-	}
-
+// ==========================================
+// 3. SELECT (TINGALI) - FITUR LENGKAP
+// ==========================================
+func parseSelect(tokens []string) (*Command, error) {
 	cmd := &Command{
-		Type:    CmdUpdate,
-		Table:   tokens[1],
-		Updates: map[string]string{pairs[0]: pairs[1]},
-		Where:   []Condition{},
+		Type:  CmdSelect,
+		Limit: -1, // Default -1 artinya euweuh limit
 	}
 
-	// Parse WHERE (dimana)
-	if len(tokens) > 4 {
-		if strings.ToUpper(tokens[4]) != "DIMANA" {
-			return nil, errors.New("kedah nganggo DIMANA")
+	// 1. DETEKSI FORMAT: "TINGALI cols TI table" ATAU "TINGALI table"
+	tiIndex := -1
+	for i, t := range tokens {
+		if strings.ToUpper(t) == "TI" || strings.ToUpper(t) == "FROM" {
+			tiIndex = i
+			break
 		}
-		whereCmd, err := parseWhere(tokens[5:]) // Reuse logic WHERE
-		if err != nil {
-			return nil, err
+	}
+
+	idx := 0 // Index pointer pikeun neruskeun parsing clause
+
+	if tiIndex != -1 {
+		// === FORMAT BARU: TINGALI nama,gaji TI pegawai ===
+		if tiIndex < 1 {
+			return nil, errors.New("kolom teu disebutkeun samemeh TI")
 		}
-		cmd.Where = whereCmd.Where
+		
+		// Gabungkeun tokens samemeh TI (misal: "nama" "," "gaji")
+		colsPart := strings.Join(tokens[1:tiIndex], " ")
+		rawFields := strings.Split(colsPart, ",")
+		
+		// Bersihkeun spasi
+		for _, f := range rawFields {
+			cmd.Fields = append(cmd.Fields, strings.TrimSpace(f))
+		}
+
+		if tiIndex+1 >= len(tokens) {
+			return nil, errors.New("tabel teu disebutkeun sanggeus TI")
+		}
+		cmd.Table = tokens[tiIndex+1]
+		
+		// Lanjut parsing sanggeus nama tabel
+		idx = tiIndex + 2 
+
+	} else {
+		// === FORMAT LAMA: TINGALI pegawai (Implisit SELECT *) ===
+		if len(tokens) < 2 {
+			return nil, errors.New("format TINGALI salah, minimal: TINGALI <tabel>")
+		}
+		cmd.Table = tokens[1]
+		cmd.Fields = []string{"*"} // Default ambil semua
+		
+		// Lanjut parsing sanggeus nama tabel
+		idx = 2
+	}
+
+	// 2. PARSING CLAUSES (DIMANA, RUNTUYKEUN, SAKADAR, LIWATAN)
+	// Loop ieu fleksibel, urutan clause bebas
+	for idx < len(tokens) {
+		token := strings.ToUpper(tokens[idx])
+
+		switch token {
+		case "DIMANA", "WHERE":
+			// Cari batas akhir DIMANA (nepi ka ketemu keyword lain)
+			endIdx := len(tokens)
+			for i := idx + 1; i < len(tokens); i++ {
+				kw := strings.ToUpper(tokens[i])
+				if kw == "RUNTUYKEUN" || kw == "ORDER" || kw == "SAKADAR" || kw == "LIMIT" || kw == "LIWATAN" || kw == "OFFSET" {
+					endIdx = i
+					break
+				}
+			}
+			
+			// Ambil potongan token keur kondisi
+			condTokens := tokens[idx+1 : endIdx]
+			conds, err := parseConditionsList(condTokens)
+			if err != nil {
+				return nil, err
+			}
+			cmd.Where = conds
+			
+			idx = endIdx
+
+		case "RUNTUYKEUN", "ORDER":
+			if idx+1 >= len(tokens) {
+				return nil, errors.New("RUNTUYKEUN butuh ngaran kolom")
+			}
+			
+			// Skip "BY" lamun user ngetik ORDER BY
+			targetIdx := idx + 1
+			if strings.ToUpper(tokens[targetIdx]) == "BY" {
+				targetIdx++
+			}
+
+			if targetIdx >= len(tokens) {
+				return nil, errors.New("RUNTUYKEUN butuh ngaran kolom")
+			}
+
+			cmd.OrderBy = tokens[targetIdx]
+			idx = targetIdx + 1
+
+			// Cek Mode (TI_LUHUR/DESC atau TI_HANDAP/ASC)
+			if idx < len(tokens) {
+				mode := strings.ToUpper(tokens[idx])
+				if mode == "TI_LUHUR" || mode == "TURUN" || mode == "DESC" { 
+					cmd.OrderDesc = true
+					idx++
+				} else if mode == "TI_HANDAP" || mode == "NAEK" || mode == "ASC" {
+					cmd.OrderDesc = false
+					idx++
+				}
+			}
+
+		case "SAKADAR", "LIMIT":
+			if idx+1 >= len(tokens) {
+				return nil, errors.New("SAKADAR butuh angka")
+			}
+			limit, err := strconv.Atoi(tokens[idx+1])
+			if err != nil {
+				return nil, errors.New("SAKADAR kudu angka")
+			}
+			cmd.Limit = limit
+			idx += 2
+
+		case "LIWATAN", "OFFSET":
+			if idx+1 >= len(tokens) {
+				return nil, errors.New("LIWATAN butuh angka")
+			}
+			offset, err := strconv.Atoi(tokens[idx+1])
+			if err != nil {
+				return nil, errors.New("LIWATAN kudu angka")
+			}
+			cmd.Offset = offset
+			idx += 2
+
+		default:
+			// Skip token nu teu dikenal (atawa bisa return error)
+			idx++
+		}
 	}
 
 	return cmd, nil
 }
 
-// Sintaks: MICEUN TI <table_name> DIMANA ...
+// ==========================================
+// 4. UPDATE (OMEAN)
+// ==========================================
+func parseUpdate(tokens []string) (*Command, error) {
+	// Format: OMEAN <table> JADI/JANTEN col=val,col=val DIMANA ...
+	
+	if len(tokens) < 4 {
+		return nil, errors.New("format OMEAN salah: OMEAN <table> JADI <col>=<val> DIMANA ...")
+	}
+
+	// Cek Keyword JADI / JANTEN / SET
+	keyword := strings.ToUpper(tokens[2])
+	if keyword != "JADI" && keyword != "JANTEN" && keyword != "SET" {
+		return nil, errors.New("kedah nganggo JADI / JANTEN")
+	}
+
+	cmd := &Command{
+		Type:    CmdUpdate,
+		Table:   tokens[1],
+		Updates: make(map[string]string),
+		Where:   []Condition{},
+	}
+
+	// Cari batas DIMANA
+	whereIdx := -1
+	for i := 3; i < len(tokens); i++ {
+		if strings.ToUpper(tokens[i]) == "DIMANA" || strings.ToUpper(tokens[i]) == "WHERE" {
+			whereIdx = i
+			break
+		}
+	}
+
+	// Parse Updates (col=val)
+	updateEnd := len(tokens)
+	if whereIdx != -1 {
+		updateEnd = whereIdx
+	}
+
+	// Gabung token update heula bisi aya spasi, terus split koma
+	updatePart := strings.Join(tokens[3:updateEnd], " ")
+	pairs := strings.Split(updatePart, ",")
+	
+	for _, pair := range pairs {
+		kv := strings.Split(pair, "=")
+		if len(kv) == 2 {
+			cmd.Updates[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		}
+	}
+
+	// Parse DIMANA (Lamun aya)
+	if whereIdx != -1 {
+		conds, err := parseConditionsList(tokens[whereIdx+1:])
+		if err != nil {
+			return nil, err
+		}
+		cmd.Where = conds
+	}
+
+	return cmd, nil
+}
+
+// ==========================================
+// 5. DELETE (MICEUN)
+// ==========================================
 func parseDelete(tokens []string) (*Command, error) {
-	if len(tokens) < 3 || strings.ToUpper(tokens[1]) != "TI" {
+	// Format: MICEUN TI <table_name> DIMANA ...
+	if len(tokens) < 3 {
 		return nil, errors.New("format MICEUN salah: MICEUN TI <table> DIMANA ...")
+	}
+
+	// Cek TI / FROM
+	if strings.ToUpper(tokens[1]) != "TI" && strings.ToUpper(tokens[1]) != "FROM" {
+		return nil, errors.New("kedah nganggo TI")
 	}
 
 	cmd := &Command{
@@ -83,154 +301,59 @@ func parseDelete(tokens []string) (*Command, error) {
 		Where: []Condition{},
 	}
 
+	// Cek DIMANA
 	if len(tokens) > 3 {
-		if strings.ToUpper(tokens[3]) != "DIMANA" {
+		if strings.ToUpper(tokens[3]) == "DIMANA" || strings.ToUpper(tokens[3]) == "WHERE" {
+			conds, err := parseConditionsList(tokens[4:])
+			if err != nil {
+				return nil, err
+			}
+			cmd.Where = conds
+		} else {
 			return nil, errors.New("kedah nganggo DIMANA")
 		}
-		whereCmd, err := parseWhere(tokens[4:])
-		if err != nil {
-			return nil, err
-		}
-		cmd.Where = whereCmd.Where
 	}
 
 	return cmd, nil
 }
 
+// ==========================================
+// HELPER: CONDITION PARSER
+// (Dipake ku SELECT, UPDATE, DELETE)
+// ==========================================
+func parseConditionsList(tokens []string) ([]Condition, error) {
+	var conditions []Condition
+	i := 0
+	for i < len(tokens) {
+		// Minimal butuh 3 token: field op value
+		if i+2 >= len(tokens) {
+			break 
+		}
 
-func parseInsert(tokens []string) (*Command, error) {
-	if len(tokens) < 3 {
-		return nil, errors.New("format simpen salah: simpen <table> <data>")
-	}
-	return &Command{
-		Type:  CmdInsert,
-		Table: tokens[1],
-		Data:  tokens[2],
-	}, nil
-}
-
-
-func parseSelect(tokens []string) (*Command, error) {
-	if len(tokens) < 2 {
-		return nil, errors.New("format TINGALI salah, minimal: TINGALI <tabel>")
-	}
-
-	cmd := &Command{
-		Type:  CmdSelect,
-		Table: tokens[1],
-		Where: []Condition{},
-		Limit: -1, 
-	}
-
-	idx := 2
-
-
-	if idx < len(tokens) && strings.ToUpper(tokens[idx]) == "DIMANA" {
-		endIdx := len(tokens)
+		field := tokens[i]
+		op := tokens[i+1]
+		val := tokens[i+2]
 		
-		for i := idx + 1; i < len(tokens); i++ {
-			kw := strings.ToUpper(tokens[i])
-			if kw == "RUNTUYKEUN" || kw == "SAKADAR" || kw == "LIWATAN" {
-				endIdx = i
-				break
-			}
-		}
+		// Bersihkeun tanda kutip dina value (misal: 'Asep' -> Asep)
+		val = strings.Trim(val, "'\"")
 
-		whereCmd, err := parseWhere(tokens[idx+1 : endIdx])
-		if err != nil {
-			return nil, err
-		}
-		cmd.Where = whereCmd.Where
-		
-		idx = endIdx
-	}
-
-	if idx < len(tokens) && strings.ToUpper(tokens[idx]) == "RUNTUYKEUN" {
-		if idx+1 >= len(tokens) {
-			return nil, errors.New("RUNTUYKEUN butuh ngaran kolom")
-		}
-		
-		cmd.OrderBy = tokens[idx+1]
-		idx += 2 
-
-		if idx < len(tokens) {
-			mode := strings.ToUpper(tokens[idx])
-			if mode == "TI_LUHUR" || mode == "TURUN" { 
-				cmd.OrderDesc = true
-				idx++
-			} else if mode == "TI_HANDAP" || mode == "NAEK" {
-				cmd.OrderDesc = false
-				idx++
-			}
-		}
-	}
-
-	if idx < len(tokens) && strings.ToUpper(tokens[idx]) == "SAKADAR" {
-		if idx+1 >= len(tokens) {
-			return nil, errors.New("SAKADAR butuh angka")
-		}
-		
-		limit, err := strconv.Atoi(tokens[idx+1])
-		if err != nil {
-			return nil, errors.New("SAKADAR kudu angka")
-		}
-		
-		cmd.Limit = limit
-		idx += 2
-	}
-
-	if idx < len(tokens) && strings.ToUpper(tokens[idx]) == "LIWATAN" {
-		if idx+1 >= len(tokens) {
-			return nil, errors.New("LIWATAN butuh angka")
-		}
-		
-		offset, err := strconv.Atoi(tokens[idx+1])
-		if err != nil {
-			return nil, errors.New("LIWATAN kudu angka")
-		}
-		
-		cmd.Offset = offset
-		idx += 2
-	}
-
-	return cmd, nil
-}
-
-
-func parseWhere(tokens []string) (*Command, error) {
-	cmd := &Command{Where: []Condition{}}
-	remaining := tokens
-	
-	for len(remaining) >= 3 {
 		cond := Condition{
-			Field:    remaining[0],
-			Operator: remaining[1],
-			Value:    remaining[2],
-			LogicOp:  "",
+			Field:    field,
+			Operator: op,
+			Value:    val,
 		}
 
-		if strings.ToUpper(cond.Operator) == "JIGA" {
-			cond.Value = strings.Trim(cond.Value, "'\"")
-		}
-
-		if len(remaining) > 3 {
-			rawLogic := strings.ToUpper(remaining[3])
-			
-			if rawLogic == "sareng" || rawLogic == "SARENG" {
-				cond.LogicOp = "SARENG"
-				remaining = remaining[4:] 
-			} else if rawLogic == "atawa" || rawLogic == "ATAWA" {
-				cond.LogicOp = "ATAWA"
-				remaining = remaining[4:]
-			} else {
-				remaining = nil
+		// Cek Logic Operator saenggeusna (SARENG / ATAWA)
+		if i+3 < len(tokens) {
+			logic := strings.ToUpper(tokens[i+3])
+			if logic == "SARENG" || logic == "AND" || logic == "ATAWA" || logic == "OR" {
+				cond.LogicOp = logic
+				i++ // Loncat token logic
 			}
-		} else {
-			remaining = nil
 		}
-
-		cmd.Where = append(cmd.Where, cond)
+		
+		conditions = append(conditions, cond)
+		i += 3 // Maju ka kondisi saterusna
 	}
-
-	return cmd, nil
+	return conditions, nil
 }

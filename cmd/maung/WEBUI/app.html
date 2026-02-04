@@ -125,63 +125,78 @@
             </div>
 
             <div class="syntax-card">
-              <h4 style="margin-top: 0; color: var(--primary);">Kamus MaungQL v2</h4>
+              <h4 style="margin-top: 0; color: var(--primary);">🐯 Kamus MaungQL v2.1</h4>
               
-              <div class="syntax-item"><span class="code-pill">TINGALI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">View data (SELECT)</div></div>
-              <div class="syntax-item"><span class="code-pill">SIMPEN &lt;tbl&gt; val|val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Insert data</div></div>
-              <div class="syntax-item"><span class="code-pill">OMEAN &lt;tbl&gt; JADI c=v</span><div style="font-size: 0.85rem; color: var(--text-muted);">Update data</div></div>
-              <div class="syntax-item"><span class="code-pill">MICEUN TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Delete data</div></div>
-              <div class="syntax-item"><span class="code-pill">DIMANA col = val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Filter (Where)</div></div>
-              <div class="syntax-item"><span class="code-pill">SARENG / ATAWA</span><div style="font-size: 0.85rem; color: var(--text-muted);">Logic operators</div></div>
-              <div class="syntax-item"><span class="code-pill">RUNTUYKEUN &lt;col&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR/HANDAP)</div></div>
-              <div class="syntax-item"><span class="code-pill">SAKADAR &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Limit rows</div></div>
+              <div class="syntax-item"><span class="code-pill">DAMEL &lt;tbl&gt; &lt;cols&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Create Table</div></div>
+              <div class="syntax-item"><span class="code-pill">SIMPEN &lt;tbl&gt; val|val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Insert Data</div></div>
+              <div class="syntax-item"><span class="code-pill">TINGALI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select all Column from Selected Table</div></div>
+              <div class="syntax-item"><span class="code-pill">TINGALI &lt;cols&gt; TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select Column from Selected Table</div></div>
+              <div class="syntax-item"><span class="code-pill">OMEAN &lt;tbl&gt; JADI c=v</span><div style="font-size: 0.85rem; color: var(--text-muted);">Update Data</div></div>
+              <div class="syntax-item"><span class="code-pill">MICEUN TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Delete Data</div></div>
 
-              <div class="syntax-item">
-                <h5 style="margin:5px 0; color:var(--primary);">Data Types</h5>
-                <span style="font-size: 0.8rem; font-family:monospace; color:#4f46e5;">INT, FLOAT, BOOL, STRING, TEXT, DATE, CHAR(n), ENUM(a,b)</span>
-              </div>
+              <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">🔍 Filter & Logika</h5>
+              <div class="syntax-item"><span class="code-pill">DIMANA col = val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Condition (Where)</div></div>
+              <div class="syntax-item"><span class="code-pill">SARENG / ATAWA</span><div style="font-size: 0.85rem; color: var(--text-muted);">AND / OR Logic</div></div>
+              <div class="syntax-item"><span class="code-pill">JIGA val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Like / Search</div></div>
+
+              <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">⚡ Pengatur Data</h5>
+              <div class="syntax-item"><span class="code-pill">RUNTUYKEUN &lt;col&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR / TI_HANDAP)</div></div>
+              <div class="syntax-item"><span class="code-pill">SAKADAR &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Limit Rows</div></div>
+              <div class="syntax-item"><span class="code-pill">LIWATAN &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Offset Rows</div></div>
+
+              <h5 style="margin:10px 0 5px 0; color:var(--success); font-size:0.85rem;">🧮 Matematika (Baru!)</h5>
+              <div class="syntax-item"><span class="code-pill">JUMLAH()</span><div style="font-size: 0.85rem; color: var(--text-muted);">Count Rows</div></div>
+              <div class="syntax-item"><span class="code-pill">RATA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Average (Rata-rata)</div></div>
+              <div class="syntax-item"><span class="code-pill">TOTAL(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Sum (Total)</div></div>
+              <div class="syntax-item"><span class="code-pill">PANGGEDENA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Max Value</div></div>
+              <div class="syntax-item"><span class="code-pill">PANGLEUTIKNA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Min Value</div></div>
 
               <h5 style="margin: 15px 0 10px 0; color: var(--primary); border-top: 1px dashed var(--border); padding-top: 10px;">
-                🐯 Contoh (Tabel Pegawai)
+                🧪 Test Case (Reset & Run)
               </h5>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Table (CLI Command)</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery(this.innerText)">DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),gaji:FLOAT,divisi:STRING,tgl_masuk:DATE</div>
-                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:2px; font-style:italic;">*Copy & Jalankan di Terminal Server (CMD/Bash)</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">0. Hapus Tabel Lama (Penting!)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c;" onclick="copyToQuery('MICEUN TI pegawai')">MICEUN TI pegawai</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:2px; font-style:italic;">*Klik ini dulu jika tabel 'pegawai' sudah ada</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">2. Insert Data</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 101|Asep|PRIA|5500000|IT|2023-01-10</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Tabel Lengkap</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery('DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE')">DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">3. Filter & Logic</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai DIMANA kelamin = WANITA SARENG gaji > 5000000</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">2. Isi Data (Full Command)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 101|Asep|PRIA|IT|5000000|2023-01-10</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 102|Budi|PRIA|38468000|HRD|2023-02-20</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 103|Cici|WANITA|89736578|IT|2023-03-05</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 104|Dedi|PRIA|678299876|MKT|2023-04-12</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">4. Search (Like)</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai DIMANA nama JIGA sep</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--success); margin-bottom: 4px;">3. Test Hitung Gaji</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI RATA(gaji), TOTAL(gaji), PANGGEDENA(gaji) TI pegawai</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">5. Ranking (Order & Limit)</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai RUNTUYKEUN gaji TI_LUHUR SAKADAR 3</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">4. Pilih Kolom & Urutkan</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI nama,gaji,divisi TI pegawai RUNTUYKEUN gaji TI_LUHUR</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">6. Update Data</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">OMEAN pegawai JADI gaji=8500000 DIMANA id = 101</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">5. Filter Logic (AND/OR)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai DIMANA divisi = IT SARENG gaji > 5000000</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">7. Delete Data</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">MICEUN TI pegawai DIMANA id = 103</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">6. Update & Delete</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">OMEAN pegawai JADI gaji=8500000 DIMANA nama = Cici</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">MICEUN TI pegawai DIMANA id = 104</div>
               </div>
 
             </div>
+            
           </div>
         </div>
 
@@ -220,6 +235,29 @@
             <div id="schemaBuilderAlert"></div>
 
             <div id="insertDataContainer" class="insert-container"></div>
+            <div class="card" style="margin-top: 24px; border-top: 4px solid var(--warning);">
+              <h3>📦 Data Migration (Import/Export)</h3>
+              
+              <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                  <div style="flex: 1; min-width: 250px;">
+                      <h4 style="margin-top:0;">Export Table (Download CSV)</h4>
+                      <div style="display: flex; gap: 10px;">
+                          <input type="text" id="exportTableName" placeholder="Table name..." style="flex:1;">
+                          <button onclick="doExport()" class="btn-primary" style="background: var(--text-sidebar);">⬇ Export</button>
+                      </div>
+                  </div>
+
+                  <div style="flex: 1; min-width: 250px;">
+                      <h4 style="margin-top:0;">Import CSV (Upload)</h4>
+                      <form onsubmit="event.preventDefault(); doImport();" style="display: flex; gap: 10px; flex-direction: column;">
+                          <input type="text" id="importTableName" placeholder="Target Table name..." required>
+                          <input type="file" id="importFile" accept=".csv" required style="background: white;">
+                          <button type="submit" class="btn-primary" style="background: var(--warning); color: #000;">⬆ Upload & Import</button>
+                      </form>
+                  </div>
+              </div>
+              <div id="migrationAlert" style="margin-top: 15px;"></div>
+          </div>
 
           </div>
         </div>
@@ -294,8 +332,7 @@
       }
     }
 
-    // --- 3. SCHEMA BUILDER LOGIC (UPDATED FOR ENUM & CHAR) ---
-    
+
     function addNewColumnRow() {
       const container = document.getElementById('columnsContainer');
       const div = document.createElement('div');
@@ -384,7 +421,6 @@
       }
     }
 
-    // --- 4. INSERT FORM GENERATOR (UPDATED) ---
     function generateInsertForm(tableName, fields) {
       const container = document.getElementById('insertDataContainer');
       container.style.display = 'block'; 
@@ -417,7 +453,6 @@
             inputHtml = `<input type="number" step="any" class="insert-input" placeholder="0" required>`;
         
         } else {
-            // String, Text, Char
             inputHtml = `<input type="text" class="insert-input" placeholder="..." required>`;
         }
 
@@ -466,6 +501,50 @@
           resultDiv.innerHTML = `<div class="alert alert-error">❌ ${res.error}</div>`;
        }
     }
+
+
+    // --- 7. DATA MIGRATION LOGIC ---
+    function doExport() {
+        const table = document.getElementById('exportTableName').value;
+        if(!table) { alert("Please enter table name!"); return; }
+        
+
+        window.location.href = `/db/export?table=${table}`;
+    }
+
+    async function doImport() {
+        const table = document.getElementById('importTableName').value;
+        const fileInput = document.getElementById('importFile');
+        const alertBox = document.getElementById('migrationAlert');
+
+        if(!table || fileInput.files.length === 0) { return; }
+
+        const formData = new FormData();
+        formData.append("table", table);
+        formData.append("csv_file", fileInput.files[0]);
+
+        alertBox.innerHTML = '<div style="color:blue;">⏳ Uploading & Processing...</div>';
+
+        try {
+            const raw = await fetch('/db/import', {
+                method: 'POST',
+                body: formData
+            });
+            const res = await raw.json();
+
+            if(res.success) {
+                alertBox.innerHTML = `<div class="alert alert-success">${res.message}</div>`;
+                // Refresh stats
+                let newCount = parseInt(document.getElementById('statTables').innerText); 
+                // (Optional: update row count stats if you have it)
+            } else {
+                alertBox.innerHTML = `<div class="alert alert-error">❌ ${res.error}</div>`;
+            }
+        } catch(e) {
+            alertBox.innerHTML = `<div class="alert alert-error">❌ Connection Error</div>`;
+        }
+    }
+
   </script>
 </body>
 </html>

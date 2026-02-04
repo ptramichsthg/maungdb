@@ -6,15 +6,20 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
+	"sync"
+	 "encoding/csv"
 	"github.com/febrd/maungdb/engine/auth"
 	"github.com/febrd/maungdb/internal/config"
 	"golang.org/x/crypto/bcrypt"
+	
 )
 
 // =======================
 // INIT SYSTEM
 // =======================
+
+var mutex sync.Mutex
+
 
 func Init() error {
 	// main data dir
@@ -163,4 +168,64 @@ func Rewrite(table string, rows []string) error {
 	}
 
 	return os.WriteFile(path, []byte(content), 0644)
+}
+
+// Tambahkan import "encoding/csv" dan "os"
+
+// ExportCSV: Maca data tabel terus dijadikeun file CSV
+func ExportCSV(table string) (string, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	rows, err := ReadAll(table)
+	if err != nil {
+		return "", err
+	}
+
+	// Ngaran file output sementara
+	filename := filepath.Join(config.DataDir, table+".csv")
+	file, err := os.Create(filename)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, row := range rows {
+		if row == "" { continue }
+		// MaungDB misahkeun data pake "|", urang ganti jadi Column CSV
+		cols := strings.Split(row, "|")
+		if err := writer.Write(cols); err != nil {
+			return "", err
+		}
+	}
+
+	return filename, nil
+}
+
+// ImportCSV: Maca file CSV terus asupkeun ka tabel (Append)
+func ImportCSV(table string, filePath string) (int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, record := range records {
+		// Gabungkeun deui jadi format MaungDB (pake pipa |)
+		rowStr := strings.Join(record, "|")
+		if err := Append(table, rowStr); err == nil {
+			count++
+		}
+	}
+	return count, nil
 }

@@ -36,6 +36,10 @@ func Execute(cmd *parser.Command) (*ExecutionResult, error) {
 	}
 }
 
+// ==========================================
+// CREATE & INSERT
+// ==========================================
+
 func execCreate(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
 	fields := splitColumns(cmd.Data)
@@ -52,10 +56,11 @@ func execCreate(cmd *parser.Command) (*ExecutionResult, error) {
 	return &ExecutionResult{Message: fmt.Sprintf("✅ Tabel '%s' parantos didamel!", cmd.Table)}, nil
 }
 
+// Helper untuk memisahkan kolom CREATE TABLE, menangani koma dalam kurung ENUM(A,B)
 func splitColumns(input string) []string {
 	var fields []string
 	var currentField strings.Builder
-	parenCount := 0 
+	parenCount := 0
 
 	for _, char := range input {
 		switch char {
@@ -76,7 +81,7 @@ func splitColumns(input string) []string {
 			currentField.WriteRune(char)
 		}
 	}
-	
+
 	if currentField.Len() > 0 {
 		fields = append(fields, strings.TrimSpace(currentField.String()))
 	}
@@ -109,112 +114,218 @@ func execInsert(cmd *parser.Command) (*ExecutionResult, error) {
 	}, nil
 }
 
+// ==========================================
+// SELECT (Full Features: Filter, Sort, Limit, Agregasi)
+// ==========================================
 func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
+	// 1. SETUP & SECURITY
 	user, _ := auth.CurrentUser()
+
+	// Load Schema
 	s, err := schema.Load(user.Database, cmd.Table)
-	if err != nil { 
-		return nil, err 
-	}
-	if !s.Can(user.Role, "read") { 
-		return nil, errors.New("teu boga hak maca") 
+	if err != nil {
+		return nil, fmt.Errorf("gagal maca schema tabel '%s': %v", cmd.Table, err)
 	}
 
+	// Cek Hak Akses
+	if !s.Can(user.Role, "read") {
+		return nil, errors.New("akses ditolak: anjeun teu boga hak maca tabel ieu")
+	}
+
+	// Baca Data Raw
 	rawRows, err := storage.ReadAll(cmd.Table)
-	if err != nil { 
-		return nil, err 
+	if err != nil {
+		return nil, err
 	}
 
-	var parsedRows [][]string
-	fieldNames := s.GetFieldNames()
+	if len(rawRows) == 0 {
+		return &ExecutionResult{Message: "Data kosong", Columns: s.GetFieldNames()}, nil
+	}
 
+	fieldNames := s.GetFieldNames()
+	var filteredMaps []map[string]string // Data pikeun Agregasi (Map)
+	var filteredSlices [][]string        // Data pikeun Sorting/Limit (Slice)
+
+	// 2. FILTERING DATA
 	for _, raw := range rawRows {
 		if raw == "" { continue }
 		cols := strings.Split(raw, "|")
 
+		// --- LOGIKA FILTER WHERE (FIXED) ---
+		matches := true
 		if len(cmd.Where) > 0 {
-			matchAll := true
-			currentMatch := evaluateOne(cols, s.Columns, cmd.Where[0])
-			for i := 0; i < len(cmd.Where); i++ {
+			// Evaluasi kondisi pertama
+			matches = evaluateOne(cols, s.Columns, cmd.Where[0])
+
+			// Loop kondisi berikutnya (AND/OR)
+			// Loop sampai len-1 karena kita cek i+1 di dalam
+			for i := 0; i < len(cmd.Where)-1; i++ {
 				cond := cmd.Where[i]
-				if cond.LogicOp == "" { 
-					matchAll = currentMatch; break 
-				}
+				if cond.LogicOp == "" { break }
+
 				nextResult := evaluateOne(cols, s.Columns, cmd.Where[i+1])
-				if cond.LogicOp == "SARENG" || cond.LogicOp == "sareng"  { 
-					currentMatch = currentMatch && nextResult 
-				} else if cond.LogicOp == "ATAWA" || cond.LogicOp == "atawa" { 
-					currentMatch = currentMatch || nextResult 
+
+				op := strings.ToUpper(cond.LogicOp)
+				if op == "SARENG" || op == "AND" {
+					matches = matches && nextResult
+				} else if op == "ATAWA" || op == "OR" {
+					matches = matches || nextResult
 				}
 			}
-			if !matchAll { continue }
 		}
-		parsedRows = append(parsedRows, cols)
-	}
 
-	if cmd.OrderBy != "" {
-		colIdx := indexOf(cmd.OrderBy, fieldNames)
-		if colIdx == -1 { 
-			return nil, fmt.Errorf("kolom '%s' teu kapanggih", cmd.OrderBy) 
+		if !matches { continue } // Skip mun teu cocok
+
+		// Lolos filter -> Simpen ke Slice (untuk fitur lama)
+		filteredSlices = append(filteredSlices, cols)
+
+		// Simpen ke Map (untuk fitur agregasi baru)
+		rowMap := make(map[string]string)
+		for i, val := range cols {
+			if i < len(fieldNames) {
+				rowMap[fieldNames[i]] = val
+			}
 		}
-		
-		colType := s.Columns[colIdx].Type
+		filteredMaps = append(filteredMaps, rowMap)
+	}
 
-		sort.Slice(parsedRows, func(i, j int) bool {
-			valA := parsedRows[i][colIdx]
-			valB := parsedRows[j][colIdx]
-			isLess := false
-			
-			switch colType {
-			case "INT":
-				a, _ := strconv.Atoi(valA)
-				b, _ := strconv.Atoi(valB)
-				isLess = a < b
-			case "FLOAT":
-				a, _ := strconv.ParseFloat(valA, 64)
-				b, _ := strconv.ParseFloat(valB, 64)
-				isLess = a < b
-			default: 
-				isLess = valA < valB
+	// 3. PROSES AGREGASI ATAU PROYEKSI KOLOM
+	selectedFields := cmd.Fields
+	if len(selectedFields) == 0 || selectedFields[0] == "*" {
+		selectedFields = fieldNames
+	}
+
+	isAggregateQuery := false
+	var parsedCols []ParsedColumn
+
+	for _, f := range selectedFields {
+		pc := ParseColumnSelection(f) // Fungsi ti aggregator.go
+		parsedCols = append(parsedCols, pc)
+		if pc.IsAggregate {
+			isAggregateQuery = true
+		}
+	}
+
+	var finalResult [][]string
+	var finalHeader []string
+
+	// === CABANG A: QUERY AGREGASI (COUNT, SUM, AVG, dll) ===
+	if isAggregateQuery {
+		var resultRow []string
+
+		for _, pc := range parsedCols {
+			finalHeader = append(finalHeader, pc.OriginalText)
+
+			if pc.IsAggregate {
+				// Hitung Matematika pake data Map
+				val, _ := CalculateAggregate(filteredMaps, pc)
+				resultRow = append(resultRow, val)
+			} else {
+				// Mun Select biasa campur Agregasi (Implicit Group By - ambil baris pertama)
+				if len(filteredMaps) > 0 {
+					resultRow = append(resultRow, filteredMaps[0][pc.TargetCol])
+				} else {
+					resultRow = append(resultRow, "-")
+				}
 			}
+		}
+		finalResult = append(finalResult, resultRow)
 
-			if cmd.OrderDesc {
-				return !isLess 
+	} else {
+		// === CABANG B: QUERY BIASA (SORT & LIMIT) ===
+
+		// 1. Sorting (RUNTUYKEUN)
+		if cmd.OrderBy != "" {
+			colIdx := indexOf(cmd.OrderBy, fieldNames)
+			if colIdx != -1 {
+				colType := s.Columns[colIdx].Type // Cek tipe data schema
+
+				sort.Slice(filteredSlices, func(i, j int) bool {
+					valA := filteredSlices[i][colIdx]
+					valB := filteredSlices[j][colIdx]
+					isLess := false
+
+					switch colType {
+					case "INT":
+						a, _ := strconv.Atoi(valA)
+						b, _ := strconv.Atoi(valB)
+						isLess = a < b
+					case "FLOAT":
+						a, _ := strconv.ParseFloat(valA, 64)
+						b, _ := strconv.ParseFloat(valB, 64)
+						isLess = a < b
+					default:
+						isLess = valA < valB
+					}
+
+					if cmd.OrderDesc {
+						return !isLess
+					}
+					return isLess
+				})
 			}
-			return isLess 
-		})
+		}
+
+		// 2. Pagination (SAKADAR & LIWATAN)
+		totalRows := len(filteredSlices)
+		start := 0
+		end := totalRows
+
+		if cmd.Offset > 0 {
+			start = cmd.Offset
+			if start > totalRows { start = totalRows }
+		}
+
+		if cmd.Limit > 0 {
+			end = start + cmd.Limit
+			if end > totalRows { end = totalRows }
+		}
+
+		slicedRows := filteredSlices[start:end]
+
+		// 3. Proyeksi Kolom (Pilih kolom nu dipenta wungkul)
+		for _, pc := range parsedCols {
+			finalHeader = append(finalHeader, pc.TargetCol)
+		}
+
+		for _, rowSlice := range slicedRows {
+			var rowData []string
+			for _, pc := range parsedCols {
+				idx := indexOf(pc.TargetCol, fieldNames)
+				if idx != -1 && idx < len(rowSlice) {
+					rowData = append(rowData, rowSlice[idx])
+				} else {
+					rowData = append(rowData, "NULL")
+				}
+			}
+			finalResult = append(finalResult, rowData)
+		}
 	}
-
-	totalRows := len(parsedRows)
-	start := 0
-	end := totalRows
-
-	if cmd.Offset > 0 {
-		start = cmd.Offset
-		if start > totalRows { start = totalRows }
-	}
-
-	if cmd.Limit > 0 {
-		end = start + cmd.Limit
-		if end > totalRows { end = totalRows }
-	}
-
-	finalRows := parsedRows[start:end]
 
 	return &ExecutionResult{
-		Columns: fieldNames,
-		Rows:    finalRows,
+		Columns: finalHeader,
+		Rows:    finalResult,
+		Message: fmt.Sprintf("%d baris kapanggih", len(finalResult)),
 	}, nil
 }
 
-
+// ==========================================
+// UPDATE (OMEAN) - Fixed Logic Filter
+// ==========================================
 func execUpdate(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
 	s, err := schema.Load(user.Database, cmd.Table)
-	if err != nil { return nil, err }
-	if !s.Can(user.Role, "write") { return nil, errors.New("teu boga hak nulis (omean)") }
+	if err != nil {
+		return nil, err
+	}
+	if !s.Can(user.Role, "write") {
+		return nil, errors.New("teu boga hak nulis (omean)")
+	}
 
 	rawRows, err := storage.ReadAll(cmd.Table)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	var newRows []string
 	updatedCount := 0
@@ -223,24 +334,33 @@ func execUpdate(cmd *parser.Command) (*ExecutionResult, error) {
 		if raw == "" { continue }
 		cols := strings.Split(raw, "|")
 
-		shouldUpdate := false
-		if len(cmd.Where) == 0 {
-			shouldUpdate = true 
-		} else {
-			currentMatch := evaluateOne(cols, s.Columns, cmd.Where[0])
-			shouldUpdate = currentMatch
+		// --- LOGIKA FILTER (Sama dengan execSelect) ---
+		shouldUpdate := true
+		if len(cmd.Where) > 0 {
+			shouldUpdate = evaluateOne(cols, s.Columns, cmd.Where[0])
+			for i := 0; i < len(cmd.Where)-1; i++ {
+				cond := cmd.Where[i]
+				if cond.LogicOp == "" { break }
+				nextResult := evaluateOne(cols, s.Columns, cmd.Where[i+1])
+				op := strings.ToUpper(cond.LogicOp)
+				if op == "SARENG" || op == "AND" {
+					shouldUpdate = shouldUpdate && nextResult
+				} else if op == "ATAWA" || op == "OR" {
+					shouldUpdate = shouldUpdate || nextResult
+				}
+			}
 		}
 
 		if shouldUpdate {
 			for colName, newVal := range cmd.Updates {
 				idx := indexOf(colName, s.GetFieldNames())
 				if idx != -1 {
-					cols[idx] = newVal 
+					cols[idx] = newVal
 				}
 			}
 			updatedCount++
 		}
-		
+
 		newRows = append(newRows, strings.Join(cols, "|"))
 	}
 
@@ -251,14 +371,23 @@ func execUpdate(cmd *parser.Command) (*ExecutionResult, error) {
 	return &ExecutionResult{Message: fmt.Sprintf("✅ %d data geus diomean", updatedCount)}, nil
 }
 
+// ==========================================
+// DELETE (MICEUN) - Fixed Logic Filter
+// ==========================================
 func execDelete(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
 	s, err := schema.Load(user.Database, cmd.Table)
-	if err != nil { return nil, err }
-	if !s.Can(user.Role, "write") { return nil, errors.New("teu boga hak nulis (miceun)") }
+	if err != nil {
+		return nil, err
+	}
+	if !s.Can(user.Role, "write") {
+		return nil, errors.New("teu boga hak nulis (miceun)")
+	}
 
 	rawRows, err := storage.ReadAll(cmd.Table)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 
 	var newRows []string
 	deletedCount := 0
@@ -267,16 +396,28 @@ func execDelete(cmd *parser.Command) (*ExecutionResult, error) {
 		if raw == "" { continue }
 		cols := strings.Split(raw, "|")
 
-		shouldDelete := false
+		// --- LOGIKA FILTER (Sama dengan execSelect) ---
+		shouldDelete := true
 		if len(cmd.Where) > 0 {
 			shouldDelete = evaluateOne(cols, s.Columns, cmd.Where[0])
+			for i := 0; i < len(cmd.Where)-1; i++ {
+				cond := cmd.Where[i]
+				if cond.LogicOp == "" { break }
+				nextResult := evaluateOne(cols, s.Columns, cmd.Where[i+1])
+				op := strings.ToUpper(cond.LogicOp)
+				if op == "SARENG" || op == "AND" {
+					shouldDelete = shouldDelete && nextResult
+				} else if op == "ATAWA" || op == "OR" {
+					shouldDelete = shouldDelete || nextResult
+				}
+			}
 		}
 
 		if shouldDelete {
 			deletedCount++
-			continue 
+			continue
 		}
-		
+
 		newRows = append(newRows, raw)
 	}
 
@@ -285,6 +426,19 @@ func execDelete(cmd *parser.Command) (*ExecutionResult, error) {
 	}
 
 	return &ExecutionResult{Message: fmt.Sprintf("✅ %d data geus dipiceun", deletedCount)}, nil
+}
+
+// ==========================================
+// HELPERS
+// ==========================================
+
+func indexOf(field string, fields []string) int {
+	for i, f := range fields {
+		if f == field {
+			return i
+		}
+	}
+	return -1
 }
 
 func evaluateOne(row []string, cols []schema.Column, cond parser.Condition) bool {
@@ -306,14 +460,6 @@ func evaluateOne(row []string, cols []schema.Column, cond parser.Condition) bool
 	return match(row[idx], cond.Operator, cond.Value, colType)
 }
 
-func indexOf(field string, fields []string) int {
-	for i, f := range fields {
-		if f == field {
-			return i
-		}
-	}
-	return -1
-}
 func match(a, op, b, colType string) bool {
 	if strings.ToUpper(op) == "JIGA" {
 		return strings.Contains(strings.ToLower(a), strings.ToLower(b))
@@ -323,16 +469,16 @@ func match(a, op, b, colType string) bool {
 	case "INT":
 		numA, errA := strconv.Atoi(a)
 		numB, errB := strconv.Atoi(b)
-		
+
 		if errA != nil || errB != nil {
 			return false
 		}
 
 		switch op {
-		case "=":  return numA == numB
+		case "=": return numA == numB
 		case "!=": return numA != numB
-		case ">":  return numA > numB
-		case "<":  return numA < numB
+		case ">": return numA > numB
+		case "<": return numA < numB
 		case ">=": return numA >= numB
 		case "<=": return numA <= numB
 		}
@@ -340,16 +486,16 @@ func match(a, op, b, colType string) bool {
 	case "FLOAT":
 		fA, errA := strconv.ParseFloat(a, 64)
 		fB, errB := strconv.ParseFloat(b, 64)
-		
+
 		if errA != nil || errB != nil {
 			return false
 		}
 
 		switch op {
-		case "=":  return fA == fB
+		case "=": return fA == fB
 		case "!=": return fA != fB
-		case ">":  return fA > fB
-		case "<":  return fA < fB
+		case ">": return fA > fB
+		case "<": return fA < fB
 		case ">=": return fA >= fB
 		case "<=": return fA <= fB
 		}
@@ -359,13 +505,12 @@ func match(a, op, b, colType string) bool {
 		if op == "!=" { return a != b }
 		return false
 
-
 	case "STRING", "TEXT", "CHAR", "ENUM", "DATE":
 		switch op {
-		case "=":  return a == b
+		case "=": return a == b
 		case "!=": return a != b
-		case ">":  return a > b
-		case "<":  return a < b
+		case ">": return a > b
+		case "<": return a < b
 		case ">=": return a >= b
 		case "<=": return a <= b
 		}
@@ -373,6 +518,6 @@ func match(a, op, b, colType string) bool {
 	default:
 		return false
 	}
-	
+
 	return false
 }

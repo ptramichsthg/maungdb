@@ -13,9 +13,11 @@ const (
 type Command struct {
 	Type    CommandType
 	Table   string
+	Fields  []string
 	Data    string    
 	Updates map[string]string 
 	Where   []Condition
+	Condition []Condition
 
 	OrderBy   string 
 	OrderDesc bool   
