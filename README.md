@@ -24,7 +24,7 @@
 ### 🖼️ Screenshot Dashboard
 | **Login Screen** | **Dashboard & Stats** |
 |:---:|:---:|
-| <img src="https://github.com/febrd/maungdb/blob/main/login.png" alt="Login Screen" width="400"> | <img src="https://github.com/febrd/maungdb/blob/main/dashboard.png" alt="Dashboard" width="400"> |
+| <img src="https://github.com/febrd/maungdb/blob/main/login.png" alt="Login Screen" width="100"> | <img src="https://github.com/febrd/maungdb/blob/main/dashboard.png" alt="Dashboard" width="400"> |
 
 | **Query Console** | **Table Designer** |
 |:---:|:---:|
