@@ -11,6 +11,7 @@ import (
 	"github.com/febrd/maungdb/engine/parser"
 	"github.com/febrd/maungdb/engine/schema"
 	"github.com/febrd/maungdb/engine/storage"
+
 )
 
 type ExecutionResult struct {
@@ -42,6 +43,7 @@ func Execute(cmd *parser.Command) (*ExecutionResult, error) {
 
 func execCreate(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
+
 	fields := splitColumns(cmd.Data)
 
 	perms := map[string][]string{
@@ -49,12 +51,21 @@ func execCreate(cmd *parser.Command) (*ExecutionResult, error) {
 		"write": {"admin", "supermaung"},
 	}
 
+	// 1️⃣ Create schema
 	if err := schema.Create(user.Database, cmd.Table, fields, perms); err != nil {
 		return nil, err
 	}
 
-	return &ExecutionResult{Message: fmt.Sprintf("✅ Tabel '%s' parantos didamel!", cmd.Table)}, nil
+	// 2️⃣ Create empty .mg file (NO DATA)
+	if err := storage.InitTableFile(user.Database, cmd.Table); err != nil {
+		return nil, err
+	}
+
+	return &ExecutionResult{
+		Message: fmt.Sprintf("✅ Tabel '%s' didamel (schema + data siap)", cmd.Table),
+	}, nil
 }
+
 
 // Helper untuk memisahkan kolom CREATE TABLE, menangani koma dalam kurung ENUM(A,B)
 func splitColumns(input string) []string {
@@ -115,91 +126,180 @@ func execInsert(cmd *parser.Command) (*ExecutionResult, error) {
 }
 
 // ==========================================
-// SELECT (Full Features: Filter, Sort, Limit, Agregasi)
+// UPDATE: execSelect (Support JOIN, FILTER, SORT, AGGREGATE)
 // ==========================================
 func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
-	// 1. SETUP & SECURITY
+
+	// 1. SETUP & LOAD TABEL UTAMA
+	// ---------------------------
 	user, _ := auth.CurrentUser()
 
-	// Load Schema
-	s, err := schema.Load(user.Database, cmd.Table)
-	if err != nil {
-		return nil, fmt.Errorf("gagal maca schema tabel '%s': %v", cmd.Table, err)
-	}
-
-	// Cek Hak Akses
-	if !s.Can(user.Role, "read") {
-		return nil, errors.New("akses ditolak: anjeun teu boga hak maca tabel ieu")
-	}
-
-	// Baca Data Raw
-	rawRows, err := storage.ReadAll(cmd.Table)
+	// Ambil kolom dari schema (SUMBER HEADER YANG BENAR)
+	columns, err := schema.GetColumns(user.Database, cmd.Table)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(rawRows) == 0 {
-		return &ExecutionResult{Message: "Data kosong", Columns: s.GetFieldNames()}, nil
+	// Cek Schema & Izin
+	sMain, err := schema.Load(user.Database, cmd.Table)
+	if err != nil {
+		return nil, fmt.Errorf("gagal maca schema tabel '%s': %v", cmd.Table, err)
+	}
+	if !sMain.Can(user.Role, "read") {
+		return nil, errors.New("akses ditolak: anjeun teu boga hak maca tabel ieu")
 	}
 
-	fieldNames := s.GetFieldNames()
-	var filteredMaps []map[string]string // Data pikeun Agregasi (Map)
-	var filteredSlices [][]string        // Data pikeun Sorting/Limit (Slice)
+	// Baca semua data (TANPA HEADER)
+	mainRaw, err := storage.ReadAll(cmd.Table)
+	if err != nil {
+		return nil, err
+	}
+	if len(mainRaw) == 0 {
+		return &ExecutionResult{Message: "Data kosong"}, nil
+	}
 
-	// 2. FILTERING DATA
-	for _, raw := range rawRows {
-		if raw == "" { continue }
-		cols := strings.Split(raw, "|")
+	// === HEADER DARI SCHEMA (BUKAN .mg)
+	var currentHeader []string
+	for _, col := range columns {
+		currentHeader = append(currentHeader, cmd.Table+"."+col)
+	}
 
-		// --- LOGIKA FILTER WHERE (FIXED) ---
-		matches := true
-		if len(cmd.Where) > 0 {
-			// Evaluasi kondisi pertama
-			matches = evaluateOne(cols, s.Columns, cmd.Where[0])
+	// === DATA: SEMUA BARIS .mg
+	var currentRows [][]string
+	for _, row := range mainRaw {
+		if row == "" {
+			continue
+		}
+		currentRows = append(currentRows, strings.Split(row, "|"))
+	}
 
-			// Loop kondisi berikutnya (AND/OR)
-			// Loop sampai len-1 karena kita cek i+1 di dalam
-			for i := 0; i < len(cmd.Where)-1; i++ {
-				cond := cmd.Where[i]
-				if cond.LogicOp == "" { break }
+	// 2. PROSES JOIN
+	// ---------------------------
+	for _, join := range cmd.Joins {
 
-				nextResult := evaluateOne(cols, s.Columns, cmd.Where[i+1])
+		targetRaw, err := storage.ReadAll(join.Table)
+		if err != nil {
+			return nil, fmt.Errorf("tabel join '%s' teu kapanggih", join.Table)
+		}
+		if len(targetRaw) == 0 {
+			continue
+		}
 
-				op := strings.ToUpper(cond.LogicOp)
-				if op == "SARENG" || op == "AND" {
-					matches = matches && nextResult
-				} else if op == "ATAWA" || op == "OR" {
-					matches = matches || nextResult
+		// HEADER JOIN DARI SCHEMA
+		targetCols, err := schema.GetColumns(user.Database, join.Table)
+		if err != nil {
+			return nil, err
+		}
+
+		var targetHeaderFull []string
+		for _, h := range targetCols {
+			targetHeaderFull = append(targetHeaderFull, join.Table+"."+h)
+		}
+
+		// DATA JOIN
+		targetRows := [][]string{}
+		for _, r := range targetRaw {
+			if r != "" {
+				targetRows = append(targetRows, strings.Split(r, "|"))
+			}
+		}
+
+		var nextRows [][]string
+		matchedRightIndices := make(map[int]bool)
+
+		for _, leftRow := range currentRows {
+			matchedLeft := false
+
+			for tIdx, rightRow := range targetRows {
+				isMatch := evaluateJoinCondition(
+					leftRow,
+					rightRow,
+					currentHeader,
+					targetHeaderFull,
+					cmd.Table,
+					join.Table,
+					join.Condition,
+				)
+
+				if isMatch {
+					merged := append([]string{}, leftRow...)
+					merged = append(merged, rightRow...)
+					nextRows = append(nextRows, merged)
+
+					matchedLeft = true
+					matchedRightIndices[tIdx] = true
+				}
+			}
+
+			// LEFT JOIN
+			if !matchedLeft && (join.Type == "LEFT" || join.Type == "KENCA") {
+				merged := append([]string{}, leftRow...)
+				for range targetHeaderFull {
+					merged = append(merged, "NULL")
+				}
+				nextRows = append(nextRows, merged)
+			}
+		}
+
+		// RIGHT JOIN
+		if join.Type == "RIGHT" || join.Type == "KATUHU" {
+			for tIdx, rightRow := range targetRows {
+				if !matchedRightIndices[tIdx] {
+					merged := []string{}
+					for range currentHeader {
+						merged = append(merged, "NULL")
+					}
+					merged = append(merged, rightRow...)
+					nextRows = append(nextRows, merged)
 				}
 			}
 		}
 
-		if !matches { continue } // Skip mun teu cocok
-
-		// Lolos filter -> Simpen ke Slice (untuk fitur lama)
-		filteredSlices = append(filteredSlices, cols)
-
-		// Simpen ke Map (untuk fitur agregasi baru)
-		rowMap := make(map[string]string)
-		for i, val := range cols {
-			if i < len(fieldNames) {
-				rowMap[fieldNames[i]] = val
-			}
-		}
-		filteredMaps = append(filteredMaps, rowMap)
+		currentRows = nextRows
+		currentHeader = append(currentHeader, targetHeaderFull...)
 	}
 
-	// 3. PROSES AGREGASI ATAU PROYEKSI KOLOM
+	// 3. FILTERING & MAPPING (DIMANA)
+	// ---------------------------
+	var filteredMaps []map[string]string
+	var filteredSlices [][]string
+
+	for _, cols := range currentRows {
+		rowMap := make(map[string]string)
+		for i, val := range cols {
+			if i < len(currentHeader) {
+				fullKey := currentHeader[i]
+				rowMap[fullKey] = val
+
+				parts := strings.Split(fullKey, ".")
+				if len(parts) > 1 {
+					rowMap[parts[1]] = val
+				}
+			}
+		}
+
+		matches := true
+		if len(cmd.Where) > 0 {
+			matches = evaluateMapCondition(rowMap, cmd.Where)
+		}
+
+		if matches {
+			filteredSlices = append(filteredSlices, cols)
+			filteredMaps = append(filteredMaps, rowMap)
+		}
+	}
+
+	// 4. PROSES AGREGASI ATAU QUERY BIASA
+	// ---------------------------
 	selectedFields := cmd.Fields
 	if len(selectedFields) == 0 || selectedFields[0] == "*" {
-		selectedFields = fieldNames
+		selectedFields = currentHeader
 	}
 
 	isAggregateQuery := false
 	var parsedCols []ParsedColumn
-
 	for _, f := range selectedFields {
-		pc := ParseColumnSelection(f) // Fungsi ti aggregator.go
+		pc := ParseColumnSelection(f)
 		parsedCols = append(parsedCols, pc)
 		if pc.IsAggregate {
 			isAggregateQuery = true
@@ -209,91 +309,84 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 	var finalResult [][]string
 	var finalHeader []string
 
-	// === CABANG A: QUERY AGREGASI (COUNT, SUM, AVG, dll) ===
+	// === CABANG A: QUERY AGREGASI ===
 	if isAggregateQuery {
-		var resultRow []string
 
+		var resultRow []string
 		for _, pc := range parsedCols {
 			finalHeader = append(finalHeader, pc.OriginalText)
-
-			if pc.IsAggregate {
-				// Hitung Matematika pake data Map
-				val, _ := CalculateAggregate(filteredMaps, pc)
-				resultRow = append(resultRow, val)
-			} else {
-				// Mun Select biasa campur Agregasi (Implicit Group By - ambil baris pertama)
-				if len(filteredMaps) > 0 {
-					resultRow = append(resultRow, filteredMaps[0][pc.TargetCol])
-				} else {
-					resultRow = append(resultRow, "-")
-				}
-			}
+			val, _ := CalculateAggregate(filteredMaps, pc)
+			resultRow = append(resultRow, val)
 		}
 		finalResult = append(finalResult, resultRow)
 
 	} else {
-		// === CABANG B: QUERY BIASA (SORT & LIMIT) ===
+		// === CABANG B: QUERY BIASA (SORT, LIMIT, OFFSET) ===
 
-		// 1. Sorting (RUNTUYKEUN)
+		// B1. Sorting
 		if cmd.OrderBy != "" {
-			colIdx := indexOf(cmd.OrderBy, fieldNames)
+			colIdx := indexOf(cmd.OrderBy, currentHeader)
+			if colIdx == -1 {
+				for i, h := range currentHeader {
+					if parts := strings.Split(h, "."); len(parts) > 1 && parts[1] == cmd.OrderBy {
+						colIdx = i
+						break
+					}
+				}
+			}
+
 			if colIdx != -1 {
-				colType := s.Columns[colIdx].Type // Cek tipe data schema
-
 				sort.Slice(filteredSlices, func(i, j int) bool {
-					valA := filteredSlices[i][colIdx]
-					valB := filteredSlices[j][colIdx]
-					isLess := false
+					a, b := filteredSlices[i][colIdx], filteredSlices[j][colIdx]
+					fa, ea := strconv.ParseFloat(a, 64)
+					fb, eb := strconv.ParseFloat(b, 64)
 
-					switch colType {
-					case "INT":
-						a, _ := strconv.Atoi(valA)
-						b, _ := strconv.Atoi(valB)
-						isLess = a < b
-					case "FLOAT":
-						a, _ := strconv.ParseFloat(valA, 64)
-						b, _ := strconv.ParseFloat(valB, 64)
-						isLess = a < b
-					default:
-						isLess = valA < valB
+					less := false
+					if ea == nil && eb == nil {
+						less = fa < fb
+					} else {
+						less = a < b
 					}
-
 					if cmd.OrderDesc {
-						return !isLess
+						return !less
 					}
-					return isLess
+					return less
 				})
 			}
 		}
 
-		// 2. Pagination (SAKADAR & LIWATAN)
-		totalRows := len(filteredSlices)
-		start := 0
-		end := totalRows
-
-		if cmd.Offset > 0 {
+		// B2. Pagination
+		total := len(filteredSlices)
+		start, end := 0, total
+		if cmd.Offset > 0 && cmd.Offset < total {
 			start = cmd.Offset
-			if start > totalRows { start = totalRows }
 		}
-
-		if cmd.Limit > 0 {
+		if cmd.Limit > 0 && start+cmd.Limit < total {
 			end = start + cmd.Limit
-			if end > totalRows { end = totalRows }
 		}
 
 		slicedRows := filteredSlices[start:end]
 
-		// 3. Proyeksi Kolom (Pilih kolom nu dipenta wungkul)
+		// B3. Proyeksi
 		for _, pc := range parsedCols {
 			finalHeader = append(finalHeader, pc.TargetCol)
 		}
 
 		for _, rowSlice := range slicedRows {
+			tempMap := make(map[string]string)
+			for i, val := range rowSlice {
+				if i < len(currentHeader) {
+					tempMap[currentHeader[i]] = val
+					if p := strings.Split(currentHeader[i], "."); len(p) > 1 {
+						tempMap[p[1]] = val
+					}
+				}
+			}
+
 			var rowData []string
 			for _, pc := range parsedCols {
-				idx := indexOf(pc.TargetCol, fieldNames)
-				if idx != -1 && idx < len(rowSlice) {
-					rowData = append(rowData, rowSlice[idx])
+				if val, ok := tempMap[pc.TargetCol]; ok {
+					rowData = append(rowData, val)
 				} else {
 					rowData = append(rowData, "NULL")
 				}
@@ -307,6 +400,69 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 		Rows:    finalResult,
 		Message: fmt.Sprintf("%d baris kapanggih", len(finalResult)),
 	}, nil
+}
+
+// ==========================================
+// HELPERS (Taruh di bawah file executor.go)
+// ==========================================
+
+// Helper: Cek kondisi ON saat Join
+func evaluateJoinCondition(rowA, rowB []string, headA, headB []string, tblA, tblB string, cond parser.Condition) bool {
+	// Ambil nilai Kiri
+	valA := ""
+	fieldA := cond.Field
+	// Coba cari full match (tabel.kolom)
+	idxA := indexOf(fieldA, headA)
+	// Kalau gak ketemu, coba cari short match (kolom) di tabel A
+	if idxA == -1 {
+		idxA = indexOf(tblA+"."+fieldA, headA)
+	}
+	if idxA != -1 { valA = rowA[idxA] }
+
+	// Ambil nilai Kanan (cond.Value biasanya nama kolom di tabel B)
+	valB := ""
+	fieldB := cond.Value
+	idxB := indexOf(fieldB, headB)
+	if idxB == -1 {
+		idxB = indexOf(tblB+"."+fieldB, headB)
+	}
+	
+	if idxB != -1 { 
+		valB = rowB[idxB] 
+	} else {
+		// Jika tidak ketemu di header B, anggap string literal (misal: ON a.id = "1")
+		valB = cond.Value
+	}
+
+	return valA == valB
+}
+
+// Helper: Evaluasi Filter WHERE pada Map
+func evaluateMapCondition(rowMap map[string]string, conditions []parser.Condition) bool {
+	if len(conditions) == 0 { return true }
+
+	check := func(c parser.Condition) bool {
+		valData, ok := rowMap[c.Field]
+		if !ok { return false } // Kolom tidak ditemukan
+		return match(valData, c.Operator, c.Value, "STRING") // Auto detect string/number inside match
+	}
+
+	result := check(conditions[0])
+
+	for i := 0; i < len(conditions)-1; i++ {
+		cond := conditions[i]
+		if cond.LogicOp == "" { break }
+		
+		nextRes := check(conditions[i+1])
+		op := strings.ToUpper(cond.LogicOp)
+		
+		if op == "SARENG" || op == "AND" {
+			result = result && nextRes
+		} else if op == "ATAWA" || op == "OR" {
+			result = result || nextRes
+		}
+	}
+	return result
 }
 
 // ==========================================

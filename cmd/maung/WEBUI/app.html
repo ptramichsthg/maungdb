@@ -124,75 +124,106 @@
               <div id="queryOutput" style="margin-top: 20px;"></div>
             </div>
 
+         
             <div class="syntax-card">
-              <h4 style="margin-top: 0; color: var(--primary);">🐯 Kamus MaungQL v2.1</h4>
+              <h4 style="margin-top: 0; color: var(--primary);">🐯 Kamus MaungQL v2.2 (Enterprise)</h4>
               
               <div class="syntax-item"><span class="code-pill">DAMEL &lt;tbl&gt; &lt;cols&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Create Table</div></div>
               <div class="syntax-item"><span class="code-pill">SIMPEN &lt;tbl&gt; val|val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Insert Data</div></div>
               <div class="syntax-item"><span class="code-pill">TINGALI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select all Column from Selected Table</div></div>
-              <div class="syntax-item"><span class="code-pill">TINGALI &lt;cols&gt; TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select Column from Selected Table</div></div>
-              <div class="syntax-item"><span class="code-pill">OMEAN &lt;tbl&gt; JADI c=v</span><div style="font-size: 0.85rem; color: var(--text-muted);">Update Data</div></div>
+              <div class="syntax-item"><span class="code-pill">TINGALI &lt;cols&gt; TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select Data</div></div>
+              <div class="syntax-item"><span class="code-pill">OMEAN &lt;tbl&gt; JANTEN c=v</span><div style="font-size: 0.85rem; color: var(--text-muted);">Update Data</div></div>
               <div class="syntax-item"><span class="code-pill">MICEUN TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Delete Data</div></div>
 
+              <h5 style="margin:10px 0 5px 0; color:#8b5cf6; font-size:0.85rem;">🔗 Relasi Tabel (JOIN)</h5>
+              <div class="syntax-item"><span class="code-pill">GABUNG &lt;tbl2&gt; DINA...</span><div style="font-size: 0.85rem; color: var(--text-muted);">Inner Join (Alias: HIJIKEUN)</div></div>
+              <div class="syntax-item"><span class="code-pill">KENCA GABUNG &lt;tbl2&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Left Join (Data kiri wajib ada)</div></div>
+              <div class="syntax-item"><span class="code-pill">KATUHU GABUNG &lt;tbl2&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Right Join (Data kanan wajib ada)</div></div>
+              <div class="syntax-item"><span class="code-pill">... DINA t1.id = t2.id</span><div style="font-size: 0.85rem; color: var(--text-muted);">Kondisi Join (ON)</div></div>
+              <div class="syntax-item"><span class="code-pill">PINUH GABUNG</span><div style="font-size: 0.85rem; color: var(--text-muted);">Full Outer Join (Optional)</div></div>
+
               <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">🔍 Filter & Logika</h5>
-              <div class="syntax-item"><span class="code-pill">DIMANA col = val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Condition (Where)</div></div>
+              <div class="syntax-item"><span class="code-pill">DIMANA col = val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Condition</div></div>
               <div class="syntax-item"><span class="code-pill">SARENG / ATAWA</span><div style="font-size: 0.85rem; color: var(--text-muted);">AND / OR Logic</div></div>
               <div class="syntax-item"><span class="code-pill">JIGA val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Like / Search</div></div>
 
               <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">⚡ Pengatur Data</h5>
-              <div class="syntax-item"><span class="code-pill">RUNTUYKEUN &lt;col&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR / TI_HANDAP)</div></div>
+              <div class="syntax-item"><span class="code-pill">RUNTUYKEUN &lt;col&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR / NAEK)</div></div>
               <div class="syntax-item"><span class="code-pill">SAKADAR &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Limit Rows</div></div>
               <div class="syntax-item"><span class="code-pill">LIWATAN &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Offset Rows</div></div>
 
-              <h5 style="margin:10px 0 5px 0; color:var(--success); font-size:0.85rem;">🧮 Matematika (Baru!)</h5>
+              <h5 style="margin:10px 0 5px 0; color:var(--success); font-size:0.85rem;">🧮 Aritmatika</h5>
               <div class="syntax-item"><span class="code-pill">JUMLAH()</span><div style="font-size: 0.85rem; color: var(--text-muted);">Count Rows</div></div>
-              <div class="syntax-item"><span class="code-pill">RATA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Average (Rata-rata)</div></div>
-              <div class="syntax-item"><span class="code-pill">TOTAL(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Sum (Total)</div></div>
+              <div class="syntax-item"><span class="code-pill">RATA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Average</div></div>
+              <div class="syntax-item"><span class="code-pill">TOTAL(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Sum</div></div>
               <div class="syntax-item"><span class="code-pill">PANGGEDENA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Max Value</div></div>
               <div class="syntax-item"><span class="code-pill">PANGLEUTIKNA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Min Value</div></div>
 
               <h5 style="margin: 15px 0 10px 0; color: var(--primary); border-top: 1px dashed var(--border); padding-top: 10px;">
-                🧪 Test Case (Reset & Run)
+                🧪 Test Case 1: Single Table
               </h5>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">0. Hapus Tabel Lama (Penting!)</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">0. Reset (Hapus Tabel Lama)</div>
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c;" onclick="copyToQuery('MICEUN TI pegawai')">MICEUN TI pegawai</div>
-                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:2px; font-style:italic;">*Klik ini dulu jika tabel 'pegawai' sudah ada</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Tabel Lengkap</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery('DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE')">DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Tabel</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery(this.innerText)">DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">2. Isi Data (Single)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 101|Asep|PRIA|IT|5000000|2023-01-10</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 102|Budi|PRIA|HRD|38468000|2023-02-20</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 103|Cici|WANITA|IT|89736578|2023-03-05</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 104|Dedi|PRIA|MKT|678299876|2023-04-12</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">3. Filter & Sort</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai DIMANA divisi = IT SARENG gaji > 5000000</div>
+              </div>
+
+              <h5 style="margin: 15px 0 10px 0; color: #8b5cf6; border-top: 1px dashed var(--border); padding-top: 10px;">
+                🔗 Test Case 2: Relasi (Divisi & Karyawan)
+              </h5>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">0. Reset (Hapus Tabel Lama)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c;" onclick="copyToQuery('MICEUN TI karyawan')">MICEUN TI karyawan</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; margin-top:2px;" onclick="copyToQuery('MICEUN TI divisi')">MICEUN TI divisi</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Buat Tabel Relasi</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery('DAMEL divisi id:INT,nama_divisi:STRING')">DAMEL divisi id:INT,nama_divisi:STRING</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74; margin-top:2px;" onclick="copyToQuery('DAMEL karyawan id:INT,nama:STRING,id_divisi:INT,gaji:FLOAT')">DAMEL karyawan id:INT,nama:STRING,id_divisi:INT,gaji:FLOAT</div>
               </div>
 
               <div class="syntax-item">
                 <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">2. Isi Data (Full Command)</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 101|Asep|PRIA|IT|5000000|2023-01-10</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 102|Budi|PRIA|38468000|HRD|2023-02-20</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 103|Cici|WANITA|89736578|IT|2023-03-05</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 104|Dedi|PRIA|678299876|MKT|2023-04-12</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">SIMPEN divisi 1|Teknologi</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN divisi 2|Marketing</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:5px;" onclick="copyToQuery(this.innerText)">SIMPEN karyawan 101|Asep|1|5000000</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN karyawan 102|Siti|2|4500000</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN karyawan 103|Budi|99|4000000</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--success); margin-bottom: 4px;">3. Test Hitung Gaji</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI RATA(gaji), TOTAL(gaji), PANGGEDENA(gaji) TI pegawai</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: #8b5cf6; margin-bottom: 4px;">3. Test JOIN (Gabung)</div>
+                
+                <div style="font-size: 0.7rem; color: var(--text-muted);">Inner Join (Hanya yang cocok):</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border-color:#8b5cf6; color:#5b21b6; background:#f5f3ff;" onclick="copyToQuery('TINGALI karyawan.nama, divisi.nama_divisi TI karyawan GABUNG divisi DINA karyawan.id_divisi = divisi.id')">TINGALI karyawan.nama, divisi.nama_divisi TI karyawan GABUNG divisi DINA karyawan.id_divisi = divisi.id</div>
+
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:5px;">Left Join (Semua Karyawan + Divisi):</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border-color:#8b5cf6; color:#5b21b6; background:#f5f3ff;" onclick="copyToQuery('TINGALI karyawan.nama, divisi.nama_divisi TI karyawan KENCA GABUNG divisi DINA karyawan.id_divisi = divisi.id')">TINGALI karyawan.nama, divisi.nama_divisi TI karyawan KENCA GABUNG divisi DINA karyawan.id_divisi = divisi.id</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">4. Pilih Kolom & Urutkan</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI nama,gaji,divisi TI pegawai RUNTUYKEUN gaji TI_LUHUR</div>
-              </div>
-
-              <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">5. Filter Logic (AND/OR)</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai DIMANA divisi = IT SARENG gaji > 5000000</div>
-              </div>
-
-              <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">6. Update & Delete</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">OMEAN pegawai JADI gaji=8500000 DIMANA nama = Cici</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">MICEUN TI pegawai DIMANA id = 104</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--success); margin-bottom: 4px;">4. Test Agregasi</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery('TINGALI RATA(gaji), TOTAL(gaji) TI karyawan')">TINGALI RATA(gaji), TOTAL(gaji) TI karyawan</div>
               </div>
 
             </div>

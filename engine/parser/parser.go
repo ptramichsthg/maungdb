@@ -24,7 +24,7 @@ func Parse(query string) (*Command, error) {
 		if len(tokens) > 1 && strings.ToUpper(tokens[1]) == "CREATE" {
 			return parseCreate(tokens[2:])
 		}
-		return parseCreate(tokens)
+		return parseCreate(tokens[1:])	
 	case "SIMPEN", "TENDEUN", "INSERT":
 		return parseInsert(tokens)
 	case "TINGALI", "TENJO", "SELECT":
@@ -38,25 +38,30 @@ func Parse(query string) (*Command, error) {
 	}
 }
 
+
 // ==========================================
 // 1. CREATE (DAMEL)
 // ==========================================
 func parseCreate(tokens []string) (*Command, error) {
-	// Format: DAMEL <tabel> <definisi_kolom>
 	if len(tokens) < 2 {
 		return nil, errors.New("format: DAMEL <tabel> <definisi_kolom>")
 	}
-	
-	// Jika ada token ke-3 dst, gabungkan jadi satu string data
-	dataPart := ""
-	if len(tokens) >= 2 {
-		dataPart = strings.Join(tokens[1:], "")
+
+	table := strings.TrimSpace(tokens[0])
+
+	raw := strings.Join(tokens[1:], " ")
+	raw = strings.ReplaceAll(raw, " ,", ",")
+	raw = strings.ReplaceAll(raw, ", ", ",")
+	raw = strings.TrimSpace(raw)
+
+	if raw == "" {
+		return nil, errors.New("definisi kolom teu meunang kosong")
 	}
 
 	return &Command{
 		Type:  CmdCreate,
-		Table: tokens[0],
-		Data:  dataPart,
+		Table: table,
+		Data:  raw,
 	}, nil
 }
 
@@ -64,12 +69,12 @@ func parseCreate(tokens []string) (*Command, error) {
 // 2. INSERT (SIMPEN)
 // ==========================================
 func parseInsert(tokens []string) (*Command, error) {
-	// Format: SIMPEN <tabel> <val|val|val>
 	if len(tokens) < 3 {
 		return nil, errors.New("format simpen salah: SIMPEN <table> <data>")
 	}
-	// Gabung sisa token (bisi aya spasi dina string data)
+
 	dataPart := strings.Join(tokens[2:], " ")
+
 	return &Command{
 		Type:  CmdInsert,
 		Table: tokens[1],
@@ -77,13 +82,15 @@ func parseInsert(tokens []string) (*Command, error) {
 	}, nil
 }
 
+
 // ==========================================
-// 3. SELECT (TINGALI) - FITUR LENGKAP
+// UPDATE: parseSelect (Support Full JOIN: Inner, Left, Right)
 // ==========================================
 func parseSelect(tokens []string) (*Command, error) {
 	cmd := &Command{
 		Type:  CmdSelect,
 		Limit: -1, // Default -1 artinya euweuh limit
+		Joins: []JoinClause{}, // Inisialisasi slice Joins
 	}
 
 	// 1. DETEKSI FORMAT: "TINGALI cols TI table" ATAU "TINGALI table"
@@ -132,92 +139,150 @@ func parseSelect(tokens []string) (*Command, error) {
 		idx = 2
 	}
 
-	// 2. PARSING CLAUSES (DIMANA, RUNTUYKEUN, SAKADAR, LIWATAN)
-	// Loop ieu fleksibel, urutan clause bebas
+	// 2. PARSING CLAUSES (JOIN, DIMANA, RUNTUYKEUN, SAKADAR, LIWATAN)
 	for idx < len(tokens) {
 		token := strings.ToUpper(tokens[idx])
 
+		// --- LOGIKA JOIN BARU ---
+		// Deteksi keyword awal: GABUNG, JOIN, LEFT, RIGHT, INNER, KENCAB, KATUHU
+		if isJoinKeyword(token) {
+			
+			// 1. Tentukan Tipe Join (Default: INNER)
+			joinType := "INNER"
+			
+			// Cek apakah tokennya LEFT/RIGHT/INNER/KENCAB/KATUHU
+			if token == "LEFT" || token == "KENCA" {
+				joinType = "LEFT"
+				idx++ // Skip token tipe, lanjut cari "GABUNG/JOIN"
+			} else if token == "RIGHT" || token == "KATUHU" {
+				joinType = "RIGHT"
+				idx++
+			} else if token == "INNER" || token == "HIJIKEUN" {
+				joinType = "INNER"
+				idx++
+			} else if token == "FULL" || token == "PINUH" {
+				joinType = "FULL" // Optional mun rek support full outer
+				idx++
+			}
+
+			// Pastikan setelah tipe ada kata GABUNG/JOIN (kecuali user nulis langsung GABUNG tanpa tipe)
+			if idx >= len(tokens) {
+				return nil, errors.New("paréntah JOIN teu lengkep")
+			}
+			
+			currToken := strings.ToUpper(tokens[idx])
+			if currToken == "GABUNG" || currToken == "JOIN" {
+				idx++ // Skip kata GABUNG/JOIN
+			} else if token == "GABUNG" || token == "JOIN" {
+				// Kasus: User langsung nulis GABUNG (Implicit Inner)
+				// Ulah di skip deui, idx geus bener di awal loop
+				idx++
+			} else {
+				return nil, errors.New("sanggeus tipe join kedah aya GABUNG/JOIN")
+			}
+
+			// 2. Ambil Nama Tabel Join
+			if idx >= len(tokens) {
+				return nil, errors.New("tabel join teu disebutkeun")
+			}
+			joinTable := tokens[idx]
+			idx++
+
+			// 3. Cek Keyword ON / DINA
+			if idx >= len(tokens) {
+				return nil, errors.New("join butuh kondisi DINA / ON")
+			}
+			onKeyword := strings.ToUpper(tokens[idx])
+			if onKeyword != "DINA" && onKeyword != "ON" {
+				return nil, errors.New("saenggeus tabel join kedah nganggo DINA / ON")
+			}
+			idx++
+
+			// 4. Ambil Kondisi (a = b) -> 3 token
+			if idx+2 >= len(tokens) {
+				return nil, errors.New("kondisi join teu lengkep (col1 = col2)")
+			}
+
+			joinCond := Condition{
+				Field:    tokens[idx],
+				Operator: tokens[idx+1],
+				Value:    tokens[idx+2],
+			}
+			idx += 3 // Maju 3 langkah
+
+			// Simpan ke struct Command
+			cmd.Joins = append(cmd.Joins, JoinClause{
+				Type:      joinType,
+				Table:     joinTable,
+				Condition: joinCond,
+			})
+			
+			continue // Lanjut loop (bisi aya join deui atawa dimana)
+		}
+
+		// --- CLAUSE LAINNYA ---
 		switch token {
 		case "DIMANA", "WHERE":
-			// Cari batas akhir DIMANA (nepi ka ketemu keyword lain)
 			endIdx := len(tokens)
 			for i := idx + 1; i < len(tokens); i++ {
 				kw := strings.ToUpper(tokens[i])
-				if kw == "RUNTUYKEUN" || kw == "ORDER" || kw == "SAKADAR" || kw == "LIMIT" || kw == "LIWATAN" || kw == "OFFSET" {
+				// Tambahkan keyword JOIN ke daftar "stop words"
+				if kw == "RUNTUYKEUN" || kw == "ORDER" || kw == "SAKADAR" || kw == "LIMIT" || kw == "LIWATAN" || kw == "OFFSET" || isJoinKeyword(kw) {
 					endIdx = i
 					break
 				}
 			}
-			
-			// Ambil potongan token keur kondisi
 			condTokens := tokens[idx+1 : endIdx]
 			conds, err := parseConditionsList(condTokens)
-			if err != nil {
-				return nil, err
-			}
+			if err != nil { return nil, err }
 			cmd.Where = conds
-			
 			idx = endIdx
 
 		case "RUNTUYKEUN", "ORDER":
-			if idx+1 >= len(tokens) {
-				return nil, errors.New("RUNTUYKEUN butuh ngaran kolom")
-			}
-			
-			// Skip "BY" lamun user ngetik ORDER BY
+			if idx+1 >= len(tokens) { return nil, errors.New("RUNTUYKEUN butuh ngaran kolom") }
 			targetIdx := idx + 1
-			if strings.ToUpper(tokens[targetIdx]) == "BY" {
-				targetIdx++
-			}
-
-			if targetIdx >= len(tokens) {
-				return nil, errors.New("RUNTUYKEUN butuh ngaran kolom")
-			}
-
+			if strings.ToUpper(tokens[targetIdx]) == "BY" { targetIdx++ }
+			if targetIdx >= len(tokens) { return nil, errors.New("RUNTUYKEUN butuh ngaran kolom") }
+			
 			cmd.OrderBy = tokens[targetIdx]
 			idx = targetIdx + 1
-
-			// Cek Mode (TI_LUHUR/DESC atau TI_HANDAP/ASC)
 			if idx < len(tokens) {
 				mode := strings.ToUpper(tokens[idx])
 				if mode == "TI_LUHUR" || mode == "TURUN" || mode == "DESC" { 
-					cmd.OrderDesc = true
-					idx++
+					cmd.OrderDesc = true; idx++ 
 				} else if mode == "TI_HANDAP" || mode == "NAEK" || mode == "ASC" {
-					cmd.OrderDesc = false
-					idx++
+					cmd.OrderDesc = false; idx++
 				}
 			}
 
 		case "SAKADAR", "LIMIT":
-			if idx+1 >= len(tokens) {
-				return nil, errors.New("SAKADAR butuh angka")
-			}
+			if idx+1 >= len(tokens) { return nil, errors.New("SAKADAR butuh angka") }
 			limit, err := strconv.Atoi(tokens[idx+1])
-			if err != nil {
-				return nil, errors.New("SAKADAR kudu angka")
-			}
+			if err != nil { return nil, errors.New("SAKADAR kudu angka") }
 			cmd.Limit = limit
 			idx += 2
 
 		case "LIWATAN", "OFFSET":
-			if idx+1 >= len(tokens) {
-				return nil, errors.New("LIWATAN butuh angka")
-			}
+			if idx+1 >= len(tokens) { return nil, errors.New("LIWATAN butuh angka") }
 			offset, err := strconv.Atoi(tokens[idx+1])
-			if err != nil {
-				return nil, errors.New("LIWATAN kudu angka")
-			}
+			if err != nil { return nil, errors.New("LIWATAN kudu angka") }
 			cmd.Offset = offset
 			idx += 2
 
 		default:
-			// Skip token nu teu dikenal (atawa bisa return error)
-			idx++
+			idx++ // Skip token aneh
 		}
 	}
 
 	return cmd, nil
+}
+
+// Helper untuk cek apakah token adalah awal dari JOIN syntax
+func isJoinKeyword(t string) bool {
+	return t == "GABUNG" || t == "JOIN" || 
+	       t == "INNER" ||  t == "HIJIKEUN" || 
+	       t == "LEFT" || t == "KENCA" || 
+	       t == "RIGHT" || t == "KATUHU"
 }
 
 // ==========================================

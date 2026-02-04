@@ -10,6 +10,12 @@ const (
 	CmdDelete CommandType = "DELETE"
 )
 
+type JoinClause struct {
+    Type      string // "INNER", "LEFT", "RIGHT"
+    Table     string // Tabel nu rek digabung (misal: divisi)
+    Condition Condition // Kondisi ON (misal: pegawai.divisi_id = divisi.id)
+}
+
 type Command struct {
 	Type    CommandType
 	Table   string
@@ -18,7 +24,7 @@ type Command struct {
 	Updates map[string]string 
 	Where   []Condition
 	Condition []Condition
-
+	Joins 	[]JoinClause
 	OrderBy   string 
 	OrderDesc bool   
 	Limit     int   

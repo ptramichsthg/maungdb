@@ -126,6 +126,22 @@ func ReadAll(table string) ([]string, error) {
 	return rows, nil
 }
 
+func InitTableFile(database, table string) error {
+	dbPath := filepath.Join(config.DataDir, "db_"+database)
+	path := filepath.Join(dbPath, table+".mg")
+
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	return file.Close()
+}
+
 func initDefaultUser(systemPath string) error {
 	userFile := filepath.Join(systemPath, "users.maung")
 
