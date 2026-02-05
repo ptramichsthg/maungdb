@@ -232,3 +232,21 @@ tr:hover td { background: #f8fafc; }
     
     h1 { font-size: 2rem; }
 }
+
+/* ... style lainnya ... */
+
+.responsive-logo {
+    max-width: 100%;       /* KUNCI: Gambar tidak akan melebihi lebar layar */
+    height: auto;          /* Menjaga rasio gambar agar tidak gepeng */
+    width: 700px;          /* Target ukuran di Desktop */
+    display: block;        /* Agar blok, supaya margin bekerja */
+    margin: 20px 0;        /* Jarak atas bawah */
+    border-radius: 8px;    /* Opsional: pemanis sudut */
+}
+
+/* Agar di HP gambar 100% mengikuti lebar container */
+@media (max-width: 768px) {
+    .responsive-logo {
+        width: 100%;
+    }
+}

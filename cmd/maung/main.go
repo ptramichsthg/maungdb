@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"github.com/joho/godotenv"
+
 
 	"github.com/febrd/maungdb/internal/config"
 	"github.com/febrd/maungdb/engine/auth"
@@ -14,6 +16,7 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load()
 	if len(os.Args) < 2 {
 		help()
 		return
