@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -129,23 +129,13 @@
         }
     }
 
-    function animateParticles() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < particlesArray.length; i++) {
-            particlesArray[i].update();
-            particlesArray[i].draw();
-        }
-        requestAnimationFrame(animateParticles);
-    }
+  <input id="username" placeholder="Username">
+  <input id="password" type="password" placeholder="Password">
 
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        initParticles();
-    });
+  <button onclick="login()">Login</button>
+</div>
 
-    initParticles();
-    animateParticles();
-  </script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/auth.js"></script>
 </body>
 </html>
