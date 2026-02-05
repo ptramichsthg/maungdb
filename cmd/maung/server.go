@@ -67,6 +67,8 @@ func startServer(port string) {
 
 	http.HandleFunc("/db/export", handleExport)
 	http.HandleFunc("/db/import", handleImport)
+	
+	http.HandleFunc("/ai/chat", handleAIChat)
 
 	serveWebUI()
 

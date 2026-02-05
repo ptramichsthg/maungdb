@@ -8,6 +8,35 @@
   <link rel="stylesheet" href="/public/css/style_main.css" />
   <link rel="stylesheet" href="/public/css/style_table_designer.css" />
 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>  
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            colors: {
+              maung: {
+                50: '#fff7ed',
+                100: '#ffedd5',
+                500: '#f97316',
+                600: '#ea580c',
+                700: '#c2410c',
+                900: '#7c2d12',
+              }
+            }
+          }
+        },
+        corePlugins: {
+          preflight: false,
+        }
+      }
+    </script>
+
 </head>
 <body>
 
@@ -334,7 +363,8 @@
   <script src="/public/js/db.js"></script>
   <script src="/public/js/query.js"></script>
   <script src="/public/js/auth.js"></script>
-
+  <script src="/public/js/ai-assistant.js"></script>
+  
   <script>
     function saveState(key, value) { localStorage.setItem(key, value); }
     function loadState(key) { return localStorage.getItem(key); }
