@@ -13,7 +13,7 @@ async function login() {
     }
 
     // Simpan token atau state jika perlu, lalu redirect
-    window.location.href = "/static/app.html";
+    window.location.href = "/public/app.html";
   } catch (err) {
     alertBox.style.display = "block";
     alertBox.innerText = "Kesalahan koneksi server.";

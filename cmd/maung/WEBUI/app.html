@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MaungDB Studio</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/style_main.css" />
+  <link rel="stylesheet" href="/public/css/style_main.css" />
+  <link rel="stylesheet" href="/public/css/style_table_designer.css" />
 
-
-  
 </head>
 <body>
 
@@ -18,6 +17,7 @@
     
     <aside class="sidebar">
       <div class="sidebar-header">
+
         <span style="margin-right: 10px;">🐯</span> MaungDB Studio
       </div>
 
@@ -40,9 +40,13 @@
         <div class="nav-item" onclick="switchTab('schema')">
           <span>📐</span> Table Designer
         </div>
+        <a href="/public/docs.html" class="nav-item" style="text-decoration: none; color: inherit;">
+          <span>📝</span> Documentation
+        </a>
       </nav>
 
       <div class="sidebar-footer">
+        
         <button onclick="logout()" class="btn-logout">Sign Out</button>
       </div>
     </aside>
@@ -63,6 +67,7 @@
       </header>
 
       <div class="content-area">
+        
         
         <div id="tab-dashboard" class="tool-panel active">
           <h2>Overview</h2>
@@ -131,31 +136,31 @@
               <div class="syntax-item"><span class="code-pill">DAMEL &lt;tbl&gt; &lt;cols&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Create Table</div></div>
               <div class="syntax-item"><span class="code-pill">SIMPEN &lt;tbl&gt; val|val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Insert Data</div></div>
               <div class="syntax-item"><span class="code-pill">TINGALI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select all Column from Selected Table</div></div>
-              <div class="syntax-item"><span class="code-pill">TINGALI &lt;cols&gt; TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select Data</div></div>
-              <div class="syntax-item"><span class="code-pill">OMEAN &lt;tbl&gt; JANTEN c=v</span><div style="font-size: 0.85rem; color: var(--text-muted);">Update Data</div></div>
+              <div class="syntax-item"><span class="code-pill">TINGALI &lt;cols&gt; TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Select Column from Selected Table</div></div>
+              <div class="syntax-item"><span class="code-pill">OMEAN &lt;tbl&gt; JADI c=v</span><div style="font-size: 0.85rem; color: var(--text-muted);">Update Data</div></div>
               <div class="syntax-item"><span class="code-pill">MICEUN TI &lt;tbl&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Delete Data</div></div>
 
-              <h5 style="margin:10px 0 5px 0; color:#8b5cf6; font-size:0.85rem;">🔗 Relasi Tabel (JOIN)</h5>
-              <div class="syntax-item"><span class="code-pill">GABUNG &lt;tbl2&gt; DINA...</span><div style="font-size: 0.85rem; color: var(--text-muted);">Inner Join (Alias: HIJIKEUN)</div></div>
+              <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">🔍 Filter & Logika</h5>
+              <div class="syntax-item"><span class="code-pill">DIMANA col = val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Condition (Where)</div></div>
+              <div class="syntax-item"><span class="code-pill">SARENG / ATAWA</span><div style="font-size: 0.85rem; color: var(--text-muted);">AND / OR Logic</div></div>
+              <div class="syntax-item"><span class="code-pill">JIGA val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Like / Search</div></div>
+            
+              <h5 style="margin:10px 0 5px 0; color:#8b5cf6; font-size:0.85rem;">🔗 Relasi Tabel (JOIN) </h5>
+              <div class="syntax-item"><span class="code-pill">GABUNG &lt;tbl2&gt; DINA...</span><div style="font-size: 0.85rem; color: var(--text-muted);">Inner Join (Alias: GABUNG/JOIN/HIJIKEUN)</div></div>
               <div class="syntax-item"><span class="code-pill">KENCA GABUNG &lt;tbl2&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Left Join (Data kiri wajib ada)</div></div>
               <div class="syntax-item"><span class="code-pill">KATUHU GABUNG &lt;tbl2&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Right Join (Data kanan wajib ada)</div></div>
               <div class="syntax-item"><span class="code-pill">... DINA t1.id = t2.id</span><div style="font-size: 0.85rem; color: var(--text-muted);">Kondisi Join (ON)</div></div>
-              <div class="syntax-item"><span class="code-pill">PINUH GABUNG</span><div style="font-size: 0.85rem; color: var(--text-muted);">Full Outer Join (Optional)</div></div>
-
-              <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">🔍 Filter & Logika</h5>
-              <div class="syntax-item"><span class="code-pill">DIMANA col = val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Condition</div></div>
-              <div class="syntax-item"><span class="code-pill">SARENG / ATAWA</span><div style="font-size: 0.85rem; color: var(--text-muted);">AND / OR Logic</div></div>
-              <div class="syntax-item"><span class="code-pill">JIGA val</span><div style="font-size: 0.85rem; color: var(--text-muted);">Like / Search</div></div>
+              <div class="syntax-item"><span class="code-pill">FULL / PINUH</span><div style="font-size: 0.85rem; color: var(--text-muted);">(Optional) For Support Full Outer</div></div>
 
               <h5 style="margin:10px 0 5px 0; color:var(--primary); font-size:0.85rem;">⚡ Pengatur Data</h5>
-              <div class="syntax-item"><span class="code-pill">RUNTUYKEUN &lt;col&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR / NAEK)</div></div>
+              <div class="syntax-item"><span class="code-pill">RUNTUYKEUN &lt;col&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Order By (TI_LUHUR / TI_HANDAP / NAEK / TURUN)</div></div>
               <div class="syntax-item"><span class="code-pill">SAKADAR &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Limit Rows</div></div>
               <div class="syntax-item"><span class="code-pill">LIWATAN &lt;n&gt;</span><div style="font-size: 0.85rem; color: var(--text-muted);">Offset Rows</div></div>
 
               <h5 style="margin:10px 0 5px 0; color:var(--success); font-size:0.85rem;">🧮 Aritmatika</h5>
               <div class="syntax-item"><span class="code-pill">JUMLAH()</span><div style="font-size: 0.85rem; color: var(--text-muted);">Count Rows</div></div>
-              <div class="syntax-item"><span class="code-pill">RATA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Average</div></div>
-              <div class="syntax-item"><span class="code-pill">TOTAL(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Sum</div></div>
+              <div class="syntax-item"><span class="code-pill">RATA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Average (Rata-rata)</div></div>
+              <div class="syntax-item"><span class="code-pill">TOTAL(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Sum (Total)</div></div>
               <div class="syntax-item"><span class="code-pill">PANGGEDENA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Max Value</div></div>
               <div class="syntax-item"><span class="code-pill">PANGLEUTIKNA(col)</span><div style="font-size: 0.85rem; color: var(--text-muted);">Min Value</div></div>
 
@@ -166,15 +171,16 @@
               <div class="syntax-item">
                 <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">0. Reset (Hapus Tabel Lama)</div>
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c;" onclick="copyToQuery('MICEUN TI pegawai')">MICEUN TI pegawai</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:2px; font-style:italic;">*Klik ini dulu jika tabel 'pegawai' sudah ada</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Tabel</div>
-                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery(this.innerText)">DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Tabel Lengkap</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery('DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE')">DAMEL pegawai id:INT,nama:STRING,kelamin:ENUM(PRIA,WANITA),divisi:ENUM(IT,HRD,MKT),gaji:FLOAT,masuk:DATE</div>
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">2. Isi Data (Single)</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">2. Isi Data (Full Command)</div>
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 101|Asep|PRIA|IT|5000000|2023-01-10</div>
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 102|Budi|PRIA|HRD|38468000|2023-02-20</div>
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">SIMPEN pegawai 103|Cici|WANITA|IT|89736578|2023-03-05</div>
@@ -182,12 +188,28 @@
               </div>
 
               <div class="syntax-item">
-                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">3. Filter & Sort</div>
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--success); margin-bottom: 4px;">3. Test Hitung Gaji</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI RATA(gaji), TOTAL(gaji), PANGGEDENA(gaji) TI pegawai</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">4. Pilih Kolom & Urutkan</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI nama,gaji,divisi TI pegawai RUNTUYKEUN gaji TI_LUHUR</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">5. Filter Logic (AND/OR)</div>
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">TINGALI pegawai DIMANA divisi = IT SARENG gaji > 5000000</div>
               </div>
 
-              <h5 style="margin: 15px 0 10px 0; color: #8b5cf6; border-top: 1px dashed var(--border); padding-top: 10px;">
-                🔗 Test Case 2: Relasi (Divisi & Karyawan)
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">6. Update & Delete</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery(this.innerText)">OMEAN pegawai JADI gaji=8500000 DIMANA nama = Cici</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery(this.innerText)">MICEUN TI pegawai DIMANA id = 104</div>
+              </div>
+
+              <h5 style="margin: 15px 0 10px 0; color: var(--primary); border-top: 1px dashed var(--border); padding-top: 10px;">
+                🧪 Skenario Relasi (Divisi & Karyawan)
               </h5>
 
               <div class="syntax-item">
@@ -226,88 +248,97 @@
                 <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery('TINGALI RATA(gaji), TOTAL(gaji) TI karyawan')">TINGALI RATA(gaji), TOTAL(gaji) TI karyawan</div>
               </div>
 
+              <h5 style="margin: 15px 0 10px 0; color: #ef4444; border-top: 1px dashed var(--border); padding-top: 10px;">
+                👮‍♂️ Test Case 3: Constraint Engine (RDBMS)
+              </h5>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">0. Reset</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c;" onclick="copyToQuery('MICEUN TI siswa')">MICEUN TI siswa</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; margin-top:2px;" onclick="copyToQuery('MICEUN TI kelas')">MICEUN TI kelas</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">1. Setup Tabel (Constraint Penuh)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74;" onclick="copyToQuery('DAMEL kelas id:INT:PK,nama:STRING:UNIQUE')">DAMEL kelas id:INT:PK,nama:STRING:UNIQUE</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; background-color: #fff7ed; color: #c2410c; border: 1px solid #fdba74; margin-top:2px;" onclick="copyToQuery('DAMEL siswa nis:INT:PK,nama:STRING:NOT NULL,id_kelas:INT:FK(kelas.id)')">DAMEL siswa nis:INT:PK,nama:STRING:NOT NULL,id_kelas:INT:FK(kelas.id)</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--success); margin-bottom: 4px;">2. Insert Data Valid (Sukses)</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem;" onclick="copyToQuery('SIMPEN kelas 1|X-A')">SIMPEN kelas 1|X-A</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery('SIMPEN kelas 2|X-B')">SIMPEN kelas 2|X-B</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; margin-top:2px;" onclick="copyToQuery('SIMPEN siswa 101|Udin|1')">SIMPEN siswa 101|Udin|1 (Masuk Kelas X-A)</div>
+              </div>
+
+              <div class="syntax-item">
+                <div style="font-size: 0.75rem; font-weight: 600; color: var(--danger); margin-bottom: 4px;">3. Test ERROR (Harus Gagal!)</div>
+                
+                <div style="font-size: 0.7rem; color: var(--text-muted);">A. Duplicate PK (Kelas ID 1 sudah ada):</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border-color:#f87171; color:#991b1b; background:#fef2f2;" onclick="copyToQuery('SIMPEN kelas 1|X-C')">SIMPEN kelas 1|X-C</div>
+
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:5px;">B. Duplicate Unique (Nama 'X-A' sudah ada):</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border-color:#f87171; color:#991b1b; background:#fef2f2;" onclick="copyToQuery('SIMPEN kelas 3|X-A')">SIMPEN kelas 3|X-A</div>
+
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:5px;">C. Foreign Key Error (Kelas 99 tidak ada):</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border-color:#f87171; color:#991b1b; background:#fef2f2;" onclick="copyToQuery('SIMPEN siswa 102|Bambang|99')">SIMPEN siswa 102|Bambang|99</div>
+
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:5px;">D. Not Null Error (Nama kosong):</div>
+                <div class="code-pill" style="cursor: pointer; font-size: 0.75rem; border-color:#f87171; color:#991b1b; background:#fef2f2;" onclick="copyToQuery('SIMPEN siswa 103|NULL|1')">SIMPEN siswa 103|NULL|1</div>
+              </div>
+
             </div>
             
           </div>
         </div>
 
         <div id="tab-schema" class="tool-panel">
-          <h2>Table Designer</h2>
+          <h2>Table Designer (RDBMS)</h2>
           <div class="card">
             <form onsubmit="event.preventDefault(); buildAndSubmitSchema();">
               <div class="form-group">
                 <label>Table Name</label>
-                <input type="text" id="builderTableName" placeholder="e.g. products" required>
+                <input type="text" id="builderTableName" placeholder="e.g. products" required style="font-size: 1rem; padding: 10px;">
               </div>
 
-              <label style="display:block; margin-bottom: 10px; font-weight: 500;">Columns</label>
-              
-              <div id="columnsContainer">
-                <div class="col-row">
-                  <input type="text" placeholder="Name" class="col-name" required style="flex: 2;">
-                  <select class="col-type" style="flex: 1;" onchange="handleTypeChange(this)">
-                    <option value="int">INT (Angka)</option>
-                    <option value="float">FLOAT (Desimal)</option>
-                    <option value="string">STRING (Teks)</option>
-                    <option value="text">TEXT (Panjang)</option>
-                    <option value="bool">BOOL (T/F)</option>
-                    <option value="date">DATE (Tanggal)</option>
-                    <option value="enum">ENUM (Pilihan)</option>
-                    <option value="char">CHAR (Fixed)</option>
-                  </select>
-                  <input type="text" class="col-args" placeholder="Detail..." style="flex: 1; display: none;">
-                  <button type="button" class="btn-icon" disabled style="opacity: 0.5;">×</button>
+              <div style="margin-top: 20px;">
+                <div class="schema-header">
+                  <div>Column Name</div>
+                  <div>Data Type</div>
+                  <div>Constraints (PK / Unq / NN)</div>
+                  <div>Foreign Key (Optional)</div>
+                  <div></div>
                 </div>
+
+                <div id="columnsContainer"></div>
               </div>
 
-              <button type="button" onclick="addNewColumnRow()" class="btn-add-row">+ Add Another Column</button>
-              <button type="submit" class="btn-primary" style="width: 100%;">Create Table</button>
+              <button type="button" onclick="addNewColumnRow()" class="btn-add-row" style="margin-top:10px; width: 100%; border: 2px dashed #cbd5e1; background: #f8fafc; color: var(--text-muted);">+ Add New Column</button>
+              
+              <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+              <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">🚀 Create Table</button>
             </form>
             <div id="schemaBuilderAlert"></div>
-
-            <div id="insertDataContainer" class="insert-container"></div>
-            <div class="card" style="margin-top: 24px; border-top: 4px solid var(--warning);">
-              <h3>📦 Data Migration (Import/Export)</h3>
-              
-              <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                  <div style="flex: 1; min-width: 250px;">
-                      <h4 style="margin-top:0;">Export Table (Download CSV)</h4>
-                      <div style="display: flex; gap: 10px;">
-                          <input type="text" id="exportTableName" placeholder="Table name..." style="flex:1;">
-                          <button onclick="doExport()" class="btn-primary" style="background: var(--text-sidebar);">⬇ Export</button>
-                      </div>
-                  </div>
-
-                  <div style="flex: 1; min-width: 250px;">
-                      <h4 style="margin-top:0;">Import CSV (Upload)</h4>
-                      <form onsubmit="event.preventDefault(); doImport();" style="display: flex; gap: 10px; flex-direction: column;">
-                          <input type="text" id="importTableName" placeholder="Target Table name..." required>
-                          <input type="file" id="importFile" accept=".csv" required style="background: white;">
-                          <button type="submit" class="btn-primary" style="background: var(--warning); color: #000;">⬆ Upload & Import</button>
-                      </form>
-                  </div>
-              </div>
-              <div id="migrationAlert" style="margin-top: 15px;"></div>
           </div>
-
+          
+          <div id="insertDataContainer" class="insert-container"></div>
           </div>
-        </div>
+      </div>
 
       </div>
     </div>
   </div>
 
-  <script src="/static/js/api.js"></script>
-  <script src="/static/js/db.js"></script>
-  <script src="/static/js/query.js"></script>
-  <script src="/static/js/auth.js"></script>
+  <script src="/public/js/api.js"></script>
+  <script src="/public/js/db.js"></script>
+  <script src="/public/js/query.js"></script>
+  <script src="/public/js/auth.js"></script>
 
   <script>
-    // --- 1. PERSISTENCE HELPERS ---
     function saveState(key, value) { localStorage.setItem(key, value); }
     function loadState(key) { return localStorage.getItem(key); }
 
-    // --- 2. UI LOGIC ---
     function toggleSidebar() {
       document.querySelector('.sidebar').classList.toggle('open');
       document.querySelector('.overlay').classList.toggle('active');
@@ -331,7 +362,6 @@
         document.querySelector('.user-avatar').style.background = colors[Math.floor(Math.random() * colors.length)];
       }
 
-      // Restore State
       const lastDB = loadState('maung_active_db');
       if (lastDB && lastDB !== 'null') {
         document.getElementById('dbIndicator').classList.add('active');
@@ -344,6 +374,8 @@
       document.querySelectorAll('.chart-col').forEach(col => {
         col.style.height = (Math.floor(Math.random() * 60) + 20) + '%';
       });
+   
+            addNewColumnRow();
     };
 
     const originalRunQuery = window.runQuery;
@@ -364,29 +396,55 @@
     }
 
 
-    function addNewColumnRow() {
+
+ function addNewColumnRow() {
       const container = document.getElementById('columnsContainer');
       const div = document.createElement('div');
       div.className = 'col-row';
+      
+      const ts = Date.now() + Math.random().toString(36).substr(2, 5); 
+
       div.innerHTML = `
-        <input type="text" placeholder="Name" class="col-name" required style="flex: 2;">
-        <select class="col-type" style="flex: 1;" onchange="handleTypeChange(this)">
-          <option value="int">INT</option>
-          <option value="float">FLOAT</option>
-          <option value="string">STRING</option>
-          <option value="text">TEXT</option>
-          <option value="bool">BOOL</option>
-          <option value="date">DATE</option>
-          <option value="enum">ENUM</option>
-          <option value="char">CHAR</option>
-        </select>
-        <input type="text" class="col-args" placeholder="Detail..." style="flex: 1; display: none;">
-        <button type="button" class="btn-icon" onclick="this.parentElement.remove()">×</button>
+        <input type="text" placeholder="col_name" class="col-name" required autocomplete="off">
+        
+        <div style="display:flex; gap:5px; flex-direction:column;">
+            <select class="col-type" onchange="handleTypeChange(this)">
+            <option value="int">INT</option>
+            <option value="string">STRING</option>
+            <option value="float">FLOAT</option>
+            <option value="bool">BOOL</option>
+            <option value="date">DATE</option>
+            <option value="text">TEXT</option>
+            <option value="enum">ENUM</option>
+            <option value="char">CHAR</option>
+            </select>
+            <input type="text" class="col-args" placeholder="A,B,C" style="display: none; font-size:0.75rem;">
+        </div>
+
+        <div class="constraint-group">
+            <label title="Primary Key">
+                <input type="checkbox" class="chk-hidden chk-pk" id="pk_${ts}" onchange="handlePKChange(this)">
+                <div class="chk-btn pk-btn">PK</div>
+            </label>
+
+            <label title="Unique (Tidak boleh kembar)">
+                <input type="checkbox" class="chk-hidden chk-unique" id="unq_${ts}">
+                <div class="chk-btn">Unq</div>
+            </label>
+
+            <label title="Not Null (Wajib isi)">
+                <input type="checkbox" class="chk-hidden chk-nn" id="nn_${ts}">
+                <div class="chk-btn">NN</div>
+            </label>
+        </div>
+
+        <input type="text" class="fk-input" placeholder="tabel.id" title="Foreign Key (Contoh: kelas.id)">
+
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
       `;
       container.appendChild(div);
     }
-
-    // Handle Tampilan Input Tambahan (Enum/Char)
+ 
     function handleTypeChange(selectElem) {
         const row = selectElem.parentElement;
         const argsInput = row.querySelector('.col-args');
@@ -398,12 +456,32 @@
             argsInput.required = true;
         } else if (val === 'char') {
             argsInput.style.display = 'block';
-            argsInput.placeholder = 'Panjang (Cth: 5)';
+            argsInput.placeholder = 'Length (e.g. 10)';
             argsInput.required = true;
         } else {
             argsInput.style.display = 'none';
             argsInput.required = false;
-            argsInput.value = '';
+        }
+    }
+
+
+    function handlePKChange(chkPK) {
+        const row = chkPK.closest('.col-row');
+        const chkUnq = row.querySelector('.chk-unique');
+        const chkNN = row.querySelector('.chk-nn');
+        
+        if (chkPK.checked) {
+            chkUnq.checked = true;
+            chkNN.checked = true;
+            
+            chkUnq.disabled = true;
+            chkNN.disabled = true;
+        } else {
+            chkUnq.disabled = false;
+            chkNN.disabled = false;
+            
+            chkUnq.checked = false;
+            chkNN.checked = false;
         }
     }
 
@@ -418,29 +496,44 @@
       rows.forEach(row => {
         const name = row.querySelector('.col-name').value;
         const type = row.querySelector('.col-type').value;
-        const args = row.querySelector('.col-args').value; // Ambil args
-        
+        const args = row.querySelector('.col-args').value; 
+        const isPK = row.querySelector('.chk-pk').checked;
+        const isUnique = row.querySelector('.chk-unique').checked;
+        const isNN = row.querySelector('.chk-nn').checked;
+        const fkVal = row.querySelector('.fk-input').value.trim();
+
         if(name) {
-            // Konstruksi Schema: name:ENUM(A,B) atawa name:INT
+            let def = `${name}:${type}`;
+
             if (type === 'enum' || type === 'char') {
                 if (!args) {
                     alert('Harap isi detail untuk kolom ' + name + ' (' + type + ')');
                     isValid = false;
                     return;
                 }
-                fieldsArray.push(`${name}:${type}(${args})`);
-            } else {
-                fieldsArray.push(`${name}:${type}`);
+                def += `(${args})`;
             }
+
+            if (isPK) def += ":PK";
+            else {
+                if (isUnique) def += ":UNIQUE";
+                if (isNN) def += ":NOT NULL";
+            }
+
+            if (fkVal) def += `:FK(${fkVal})`;
+
+            fieldsArray.push(def);
         }
       });
 
       if(!isValid) return;
 
+      console.log("Sending Schema:", fieldsArray);
+
       const res = await API.post("/schema/create", { table: tableName, fields: fieldsArray });
 
       if (res.success) {
-        alertBox.innerHTML = `<div class="alert alert-success">✅ Table <b>${tableName}</b> created!</div>`;
+        alertBox.innerHTML = `<div class="alert alert-success">✅ Table <b>${tableName}</b> created with constraints!</div>`;
         let count = parseInt(document.getElementById('statTables').innerText) + 1;
         document.getElementById('statTables').innerText = count;
         saveState('maung_stat_tables', count);
@@ -457,20 +550,17 @@
       container.style.display = 'block'; 
       
       let inputsHtml = '';
-      fields.forEach((field, index) => {
-        // field format: "name:TYPE" or "name:TYPE(ARGS)"
-        // Split manual pikeun aman
-        const separatorIdx = field.indexOf(':');
-        const colName = field.substring(0, separatorIdx);
-        const colTypeFull = field.substring(separatorIdx + 1).toUpperCase();
+      fields.forEach((field) => {
+
+        const parts = field.split(':');
+        const colName = parts[0];
+        const colTypeFull = parts[1].toUpperCase(); 
         
         let inputHtml = '';
 
         if (colTypeFull.startsWith('ENUM')) {
-            // Extract ENUM(A,B) -> [A, B]
             const content = colTypeFull.substring(colTypeFull.indexOf('(') + 1, colTypeFull.lastIndexOf(')'));
             const options = content.split(',');
-            
             let opts = options.map(o => `<option value="${o}">${o}</option>`).join('');
             inputHtml = `<select class="insert-input" required>${opts}</select>`;
         
@@ -490,7 +580,7 @@
         inputsHtml += `
           <div class="form-group">
             <label style="font-size:0.85rem; color:var(--text-muted);">
-                ${colName} <span class="type-badge">${colTypeFull}</span>
+                ${colName} <span class="type-badge">${colTypeFull.split('(')[0]}</span>
             </label>
             ${inputHtml}
           </div>
@@ -520,7 +610,6 @@
        
        if(res.success) {
           resultDiv.innerHTML = `<div class="alert alert-success">✅ Data inserted!</div>`;
-          // Reset inputs (keep selects at index 0)
           inputs.forEach(input => {
               if(input.tagName === 'SELECT') input.selectedIndex = 0;
               else input.value = '';
@@ -532,9 +621,6 @@
           resultDiv.innerHTML = `<div class="alert alert-error">❌ ${res.error}</div>`;
        }
     }
-
-
-    // --- 7. DATA MIGRATION LOGIC ---
     function doExport() {
         const table = document.getElementById('exportTableName').value;
         if(!table) { alert("Please enter table name!"); return; }
@@ -565,9 +651,7 @@
 
             if(res.success) {
                 alertBox.innerHTML = `<div class="alert alert-success">${res.message}</div>`;
-                // Refresh stats
                 let newCount = parseInt(document.getElementById('statTables').innerText); 
-                // (Optional: update row count stats if you have it)
             } else {
                 alertBox.innerHTML = `<div class="alert alert-error">❌ ${res.error}</div>`;
             }

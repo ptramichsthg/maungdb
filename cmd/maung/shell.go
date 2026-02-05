@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	
+
 	"github.com/febrd/maungdb/engine/auth"
 	"github.com/febrd/maungdb/engine/executor"
 	"github.com/febrd/maungdb/engine/parser"
@@ -14,7 +14,9 @@ import (
 )
 
 func startShell() {
-	fmt.Println("MaungDB Shell")
+	fmt.Println("=== MaungDB Shell====")
+	fmt.Println("ketik `help` pikeun bantosan")
+
 	fmt.Println("ketik `exit` pikeun kaluar")
 
 	reader := bufio.NewReader(os.Stdin)
@@ -39,10 +41,6 @@ func startShell() {
 			continue
 		}
 
-		// =========================
-		// SHELL BUILT-IN COMMANDS
-		// =========================
-
 		args := strings.Fields(line)
 		cmdName := args[0]
 
@@ -56,7 +54,6 @@ func startShell() {
 			continue
 
 		case "init":
-			// Ieu tambihan kanggo init
 			if err := storage.Init(); err != nil {
 				fmt.Println("❌ gagal init:", err)
 				continue
@@ -97,9 +94,8 @@ func startShell() {
 			}
 			startServer(port)
 			continue
-			
+
 		case "createuser":
-			// Access Control: supermaung
 			if err := auth.RequireRole("supermaung"); err != nil {
 				fmt.Println("❌", err)
 				continue
@@ -116,7 +112,6 @@ func startShell() {
 			continue
 
 		case "setdb":
-			// Access Control: supermaung
 			if err := auth.RequireRole("supermaung"); err != nil {
 				fmt.Println("❌", err)
 				continue
@@ -134,7 +129,6 @@ func startShell() {
 			continue
 
 		case "passwd":
-			// Access Control: supermaung
 			if err := auth.RequireRole("supermaung"); err != nil {
 				fmt.Println("❌", err)
 				continue
@@ -151,7 +145,6 @@ func startShell() {
 			continue
 
 		case "listuser":
-			// Access Control: supermaung
 			if err := auth.RequireRole("supermaung"); err != nil {
 				fmt.Println("❌", err)
 				continue
@@ -167,7 +160,6 @@ func startShell() {
 			continue
 
 		case "createdb":
-			// Access Control: supermaung
 			if err := auth.RequireRole("supermaung"); err != nil {
 				fmt.Println("❌", err)
 				continue
@@ -201,7 +193,6 @@ func startShell() {
 				fmt.Println("❌", err)
 				continue
 			}
-			// Update format help
 			if len(args) < 4 || args[1] != "create" {
 				fmt.Println("❌ format: schema create <table> <col:type,col:type> --read=..")
 				fmt.Println("   tipe: INT, STRING")
@@ -215,15 +206,24 @@ func startShell() {
 			}
 
 			table := args[2]
-			fields := strings.Split(args[3], ",")
+			fieldsRaw := strings.Split(args[3], ",")
+			var columns []schema.Column
+			for _, f := range fieldsRaw {
+				parts := strings.Split(f, ":")
+				if len(parts) >= 2 {
+					col := schema.Column{
+						Name: parts[0],
+						Type: strings.ToUpper(parts[1]),
+					}
+					columns = append(columns, col)
+				}
+			}
 
-			// Default permissions
 			perms := map[string][]string{
 				"read":  {"user", "admin", "supermaung"},
 				"write": {"admin", "supermaung"},
 			}
 
-			// Parse flags (--read, --write)
 			for _, arg := range args {
 				if strings.HasPrefix(arg, "--read=") {
 					perms["read"] = strings.Split(strings.TrimPrefix(arg, "--read="), ",")
@@ -233,78 +233,73 @@ func startShell() {
 				}
 			}
 
-			if err := schema.Create(user.Database, table, fields, perms); err != nil {
-				fmt.Println("❌", err)
-				continue
-			}
-
-			fmt.Println("✅ Schema dijieun pikeun table:", table)
-			continue
-
-		case "simpen", "tingali":
-			// Access Control: user
-			if err := auth.RequireRole("user"); err != nil {
+			if err := schema.CreateComplex(user.Database, table, columns, perms); err != nil {
 				fmt.Println("❌", err)
 				continue
 			}
 			
-			// Lanjutkeun ka logic parsing
+			storage.InitTableFile(user.Database, table)
+
+			fmt.Println("✅ Schema dijieun pikeun table:", table)
+			continue
+
+		case "simpen", "tingali", "damel", "omean", "miceun":
+			if err := auth.RequireRole("user"); err != nil {
+				fmt.Println("❌", err)
+				continue
+			}
 			processQuery(line)
 			continue
 		}
 
-		// =========================
-		// FALLBACK QUERY (MaungQL)
-		// =========================
 		processQuery(line)
 	}
 }
 
-// Tambahkeun import ieu di luhur file shell.go:
-// "text/tabwriter"
-
 func processQuery(line string) {
 	cmd, err := parser.Parse(line)
 	if err != nil {
-		fmt.Println("❌", err)
+		fmt.Println("❌ Syntax Error:", err)
 		return
 	}
 
 	result, err := executor.Execute(cmd)
 	if err != nil {
-		fmt.Println("❌", err)
+		fmt.Println("❌ Execution Error:", err)
 		return
 	}
 
 	renderTable(result)
 }
 
-// renderTable nyieun tampilan tabel siga MySQL
 func renderTable(result *executor.ExecutionResult) {
 	if result.Message != "" {
 		fmt.Println(result.Message)
-		return
+		if len(result.Columns) == 0 {
+			return
+		}
 	}
 
 	if len(result.Columns) == 0 {
-		fmt.Println("Set Kosong (Euweuh Data)")
 		return
 	}
 
-	// 1. Itung lebar unggal kolom
 	widths := make([]int, len(result.Columns))
+	
 	for i, col := range result.Columns {
 		widths[i] = len(col)
 	}
+
 	for _, row := range result.Rows {
 		for i, val := range row {
-			if len(val) > widths[i] {
-				widths[i] = len(val)
+			if i < len(widths) {
+				if len(val) > widths[i] {
+					widths[i] = len(val)
+				}
 			}
 		}
 	}
 
-	// Helper pikeun nyetak garis pamisah (+---+---+)
 	printSeparator := func() {
 		fmt.Print("+")
 		for _, w := range widths {
@@ -313,7 +308,6 @@ func renderTable(result *executor.ExecutionResult) {
 		fmt.Println()
 	}
 
-	// 2. Cetak Header
 	printSeparator()
 	fmt.Print("|")
 	for i, col := range result.Columns {
@@ -322,14 +316,16 @@ func renderTable(result *executor.ExecutionResult) {
 	fmt.Println()
 	printSeparator()
 
-	// 3. Cetak Data
 	for _, row := range result.Rows {
 		fmt.Print("|")
 		for i, val := range row {
-			fmt.Printf(" %-*s |", widths[i], val)
+			if i < len(widths) {
+				fmt.Printf(" %-*s |", widths[i], val)
+			}
 		}
 		fmt.Println()
 	}
 	printSeparator()
-	fmt.Printf("%d baris kapanggih\n", len(result.Rows))
+	
+	
 }

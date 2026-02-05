@@ -3,46 +3,156 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MaungDB - Login</title>
-  <link rel="stylesheet" href="/static/css/style_login.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>MaungDB - The Local Pride Database</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/style_login.css" />
+
+
 </head>
 <body>
-  <div class="login-container">
-    <div class="login-left">
-      <div class="particle" style="left: 10%; width: 20px; height: 20px; animation-duration: 15s;"></div>
-      <div class="particle" style="left: 70%; width: 50px; height: 50px; animation-duration: 25s; animation-delay: -5s;"></div>
-      <div class="particle" style="left: 40%; width: 30px; height: 30px; animation-duration: 18s; animation-delay: -10s;"></div>
-      
-      <h1>🐯 MaungDB</h1>
-      <p>Database Lokal, Performa Global.</p>
+
+  <canvas id="particle-canvas"></canvas>
+
+  <nav class="navbar">
+    <a href="#" class="brand">🐯 Maung Studio</a>
+    <div class="nav-links">
+      <a href="/public/docs.html" class="nav-item">Documentation</a>
+      <a href="https://github.com/febrd/maungdb" target="_blank" class="nav-item">GitHub</a>
+      <button class="nav-btn" onclick="openLogin()">Sign In</button>
     </div>
+  </nav>
 
-    <div class="login-right">
-      <div class="login-form-wrapper">
-        <h2>Wilujeng Sumping</h2>
-        <p class="subtitle">Masuk untuk mengelola database Anda.</p>
-        
-        <div id="loginAlert" class="alert alert-error" style="display: none;"></div>
+  <div class="hero-container">
+    <h1 class="hero-title">Database Lokal,<br>Performa Global.</h1>
+    <p class="hero-subtitle">
+      Platform Database Hybrid pertama dengan sintaks kearifan lokal. 
+      Cepat, aman, dan dirancang untuk kemudahan manajemen data Enterprise.
+    </p>
+    
+    <button class="cta-button" onclick="openLogin()">
+      Mulai Sekarang <span>→</span>
+    </button>
+  </div>
 
-        <form onsubmit="event.preventDefault(); login();">
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" placeholder="Contoh: maung" required autofocus />
-          </div>
-          
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" placeholder="••••••••" required />
-          </div>
-          
-          <button type="submit" class="btn-primary">Masuk Dashboard</button>
-        </form>
+  <div class="modal-overlay" id="loginModal">
+    <div class="login-card">
+      <button class="close-btn" onclick="closeLogin()">&times;</button>
+      
+      <div class="login-header">
+        <h2>Wilujeng Sumping 👋</h2>
+        <p>Masuk untuk mengakses Dashboard MaungDB.</p>
       </div>
+
+      <div id="loginAlert" class="alert alert-error"></div>
+
+      <form onsubmit="event.preventDefault(); login();">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="Username" required />
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" required />
+        </div>
+        
+        <button type="submit" class="btn-submit">Masuk Dashboard</button>
+      </form>
     </div>
   </div>
 
-  <script src="/static/js/api.js"></script>
-  <script src="/static/js/auth.js"></script>
+  <script src="/public/js/api.js"></script>
+  <script src="/public/js/auth.js"></script>
+
+  <script>
+    // --- 1. MODAL LOGIC (ONBOARDING FLOW) ---
+    const modal = document.getElementById('loginModal');
+    const usernameInput = document.getElementById('username');
+
+    function openLogin() {
+        modal.classList.add('active');
+        // Fokus otomatis ke input username setelah animasi selesai sedikit
+        setTimeout(() => usernameInput.focus(), 100);
+    }
+
+    function closeLogin() {
+        modal.classList.remove('active');
+    }
+
+    // Tutup modal jika klik di luar area kartu (overlay gelap)
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeLogin();
+        }
+    });
+
+    // Tutup modal dengan tombol ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === "Escape" && modal.classList.contains('active')) {
+            closeLogin();
+        }
+    });
+
+
+    // --- 2. PARTICLE ANIMATION ---
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let particlesArray;
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2.5 + 0.5;
+            this.speedX = Math.random() * 0.5 - 0.25; // Slow movement
+            this.speedY = Math.random() * 0.5 - 0.25;
+            // Warna Orange Maung dengan opacity random
+            this.color = 'rgba(245, 158, 11, ' + (Math.random() * 0.4 + 0.1) + ')'; 
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x > canvas.width) this.x = 0;
+            if (this.x < 0) this.x = canvas.width;
+            if (this.y > canvas.height) this.y = 0;
+            if (this.y < 0) this.y = canvas.height;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function initParticles() {
+        particlesArray = [];
+        const numberOfParticles = 100; // Lebih banyak partikel
+        for (let i = 0; i < numberOfParticles; i++) {
+            particlesArray.push(new Particle());
+        }
+    }
+
+    function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particlesArray.length; i++) {
+            particlesArray[i].update();
+            particlesArray[i].draw();
+        }
+        requestAnimationFrame(animateParticles);
+    }
+
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        initParticles();
+    });
+
+    initParticles();
+    animateParticles();
+  </script>
 </body>
 </html>

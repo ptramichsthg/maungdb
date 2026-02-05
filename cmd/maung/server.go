@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"os"
 	"io"
 	"github.com/febrd/maungdb/engine/auth"
@@ -12,10 +13,6 @@ import (
 	"github.com/febrd/maungdb/engine/schema"
 	"github.com/febrd/maungdb/engine/storage"
 )
-
-// ===========================
-// Request & Response Structs
-// ===========================
 
 type LoginRequest struct {
 	Username string `json:"username"`
@@ -221,13 +218,6 @@ func handleUse(w http.ResponseWriter, r *http.Request) {
 	sendSuccess(w, "✅ Ayeuna ngangge database: "+req.Database, nil)
 }
 
-// ===========================
-// SCHEMA HANDLER
-// ===========================
-
-
-
-// 2. Tambahkeun Handler na
 func handleSchemaCreate(w http.ResponseWriter, r *http.Request) {
 	setupHeader(w)
 	if r.Method != http.MethodPost {
@@ -235,7 +225,6 @@ func handleSchemaCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Cek Login & Role
 	if err := auth.RequireRole("admin"); err != nil {
 		sendError(w, "Akses ditolak: "+err.Error())
 		return
@@ -247,34 +236,47 @@ func handleSchemaCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Decode JSON Body
 	var req CreateSchemaRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendError(w, "Format JSON Salah: "+err.Error())
 		return
 	}
 
-	// Validasi input
 	if req.Table == "" || len(req.Fields) == 0 {
 		sendError(w, "Table sareng Fields teu kenging kosong")
 		return
 	}
 
+	rawFieldsString := strings.Join(req.Fields, ",")
+	columns := executor.ParseColumnDefinitions(rawFieldsString)
+
+	if len(columns) == 0 {
+		sendError(w, "Gagal parsing definisi kolom")
+		return
+	}
+
+	for i := range columns {
+		if columns[i].ForeignKey != "" {
+			columns[i].ForeignKey = strings.ToLower(columns[i].ForeignKey)
+		}
+	}
 
 	perms := map[string][]string{
 		"read":  {"user", "admin", "supermaung"},
 		"write": {"admin", "supermaung"},
 	}
 
-
-	if err := schema.Create(user.Database, req.Table, req.Fields, perms); err != nil {
+	if err := schema.CreateComplex(user.Database, req.Table, columns, perms); err != nil {
 		sendError(w, "Gagal nyieun schema: "+err.Error())
 		return
 	}
 
+	if err := storage.InitTableFile(user.Database, req.Table); err != nil {
+		fmt.Println("Warning: Gagal init storage file", err)
+	}
+	
 	sendSuccess(w, fmt.Sprintf("✅ Schema tabel '%s' parantos didamel!", req.Table), nil)
 }
-
 
 func handleQuery(w http.ResponseWriter, r *http.Request) {
 	setupHeader(w)
@@ -320,47 +322,36 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 	sendSuccess(w, "Query Berhasil", result)
 }
 
-// HANDLER EXPORT (Download CSV)
 func handleExport(w http.ResponseWriter, r *http.Request) {
-    // CORS Setup (Penting buat browser)
     w.Header().Set("Access-Control-Allow-Origin", "*")
     if r.Method == "OPTIONS" { return }
-
-    // Ambil parameter tabel dari URL ?table=nama_tabel
     table := r.URL.Query().Get("table")
     if table == "" {
         http.Error(w, "Parameter 'table' wajib diisi", http.StatusBadRequest)
         return
     }
 
-    // Panggil fungsi storage
     filePath, err := storage.ExportCSV(table)
     if err != nil {
         http.Error(w, "Gagal export: "+err.Error(), http.StatusInternalServerError)
         return
     }
 
-    // Set Header supaya browser download file
     w.Header().Set("Content-Disposition", "attachment; filename="+table+".csv")
     w.Header().Set("Content-Type", "text/csv")
     http.ServeFile(w, r, filePath)
-    
-    // Opsional: Hapus file CSV temp saenggeus dikirim (bersih-bersih)
-    // os.Remove(filePath) 
+
 }
 
-// HANDLER IMPORT (Upload CSV)
 func handleImport(w http.ResponseWriter, r *http.Request) {
     setupHeader(w)
     if r.Method != "POST" { return }
 
-    // 1. Parse Multipart Form (Max 10MB)
     if err := r.ParseMultipartForm(10 << 20); err != nil {
         sendError(w, "File terlalu besar")
         return
     }
 
-    // 2. Ambil file dari form
     file, _, err := r.FormFile("csv_file")
     if err != nil {
         sendError(w, "Gagal maca file")
@@ -374,21 +365,17 @@ func handleImport(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // 3. Simpen file upload ka temp
     tempFile, err := os.CreateTemp("", "upload-*.csv")
     if err != nil {
         sendError(w, "Gagal nyieun temp file")
         return
     }
-    defer os.Remove(tempFile.Name()) // Hapus mun beres
-
-    // Copy eusi file
+    defer os.Remove(tempFile.Name())
     if _, err := io.Copy(tempFile, file); err != nil {
         sendError(w, "Gagal nyalin file")
         return
     }
 
-    // 4. Proses Import ka Storage
     count, err := storage.ImportCSV(tableName, tempFile.Name())
     if err != nil {
         sendError(w, "Gagal import: "+err.Error())

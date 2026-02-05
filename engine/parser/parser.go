@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-// Parse adalah gerbang utama untuk memproses query string menjadi Command struct
 func Parse(query string) (*Command, error) {
 	query = strings.TrimSpace(query)
-	// Hapus ; di akhir jika ada
 	query = strings.TrimSuffix(query, ";")
 
 	tokens := strings.Fields(query)
@@ -38,10 +36,6 @@ func Parse(query string) (*Command, error) {
 	}
 }
 
-
-// ==========================================
-// 1. CREATE (DAMEL)
-// ==========================================
 func parseCreate(tokens []string) (*Command, error) {
 	if len(tokens) < 2 {
 		return nil, errors.New("format: DAMEL <tabel> <definisi_kolom>")
@@ -65,9 +59,6 @@ func parseCreate(tokens []string) (*Command, error) {
 	}, nil
 }
 
-// ==========================================
-// 2. INSERT (SIMPEN)
-// ==========================================
 func parseInsert(tokens []string) (*Command, error) {
 	if len(tokens) < 3 {
 		return nil, errors.New("format simpen salah: SIMPEN <table> <data>")
@@ -82,18 +73,13 @@ func parseInsert(tokens []string) (*Command, error) {
 	}, nil
 }
 
-
-// ==========================================
-// UPDATE: parseSelect (Support Full JOIN: Inner, Left, Right)
-// ==========================================
 func parseSelect(tokens []string) (*Command, error) {
 	cmd := &Command{
 		Type:  CmdSelect,
-		Limit: -1, // Default -1 artinya euweuh limit
-		Joins: []JoinClause{}, // Inisialisasi slice Joins
+		Limit: -1, 
+		Joins: []JoinClause{},
 	}
 
-	// 1. DETEKSI FORMAT: "TINGALI cols TI table" ATAU "TINGALI table"
 	tiIndex := -1
 	for i, t := range tokens {
 		if strings.ToUpper(t) == "TI" || strings.ToUpper(t) == "FROM" {
@@ -102,19 +88,14 @@ func parseSelect(tokens []string) (*Command, error) {
 		}
 	}
 
-	idx := 0 // Index pointer pikeun neruskeun parsing clause
-
+	idx := 0 
 	if tiIndex != -1 {
-		// === FORMAT BARU: TINGALI nama,gaji TI pegawai ===
 		if tiIndex < 1 {
 			return nil, errors.New("kolom teu disebutkeun samemeh TI")
 		}
 		
-		// Gabungkeun tokens samemeh TI (misal: "nama" "," "gaji")
 		colsPart := strings.Join(tokens[1:tiIndex], " ")
 		rawFields := strings.Split(colsPart, ",")
-		
-		// Bersihkeun spasi
 		for _, f := range rawFields {
 			cmd.Fields = append(cmd.Fields, strings.TrimSpace(f))
 		}
@@ -124,36 +105,28 @@ func parseSelect(tokens []string) (*Command, error) {
 		}
 		cmd.Table = tokens[tiIndex+1]
 		
-		// Lanjut parsing sanggeus nama tabel
 		idx = tiIndex + 2 
 
 	} else {
-		// === FORMAT LAMA: TINGALI pegawai (Implisit SELECT *) ===
 		if len(tokens) < 2 {
 			return nil, errors.New("format TINGALI salah, minimal: TINGALI <tabel>")
 		}
 		cmd.Table = tokens[1]
-		cmd.Fields = []string{"*"} // Default ambil semua
-		
-		// Lanjut parsing sanggeus nama tabel
+		cmd.Fields = []string{"*"} 
 		idx = 2
 	}
 
-	// 2. PARSING CLAUSES (JOIN, DIMANA, RUNTUYKEUN, SAKADAR, LIWATAN)
 	for idx < len(tokens) {
 		token := strings.ToUpper(tokens[idx])
 
-		// --- LOGIKA JOIN BARU ---
-		// Deteksi keyword awal: GABUNG, JOIN, LEFT, RIGHT, INNER, KENCAB, KATUHU
+		
 		if isJoinKeyword(token) {
 			
-			// 1. Tentukan Tipe Join (Default: INNER)
 			joinType := "INNER"
 			
-			// Cek apakah tokennya LEFT/RIGHT/INNER/KENCAB/KATUHU
 			if token == "LEFT" || token == "KENCA" {
 				joinType = "LEFT"
-				idx++ // Skip token tipe, lanjut cari "GABUNG/JOIN"
+				idx++ 
 			} else if token == "RIGHT" || token == "KATUHU" {
 				joinType = "RIGHT"
 				idx++
@@ -161,34 +134,29 @@ func parseSelect(tokens []string) (*Command, error) {
 				joinType = "INNER"
 				idx++
 			} else if token == "FULL" || token == "PINUH" {
-				joinType = "FULL" // Optional mun rek support full outer
+				joinType = "FULL" 
 				idx++
 			}
 
-			// Pastikan setelah tipe ada kata GABUNG/JOIN (kecuali user nulis langsung GABUNG tanpa tipe)
 			if idx >= len(tokens) {
 				return nil, errors.New("paréntah JOIN teu lengkep")
 			}
 			
 			currToken := strings.ToUpper(tokens[idx])
 			if currToken == "GABUNG" || currToken == "JOIN" || currToken == "HIJIKEUN"  {
-				idx++ // Skip kata GABUNG/JOIN
+				idx++ 
 			} else if token == "GABUNG" || token == "JOIN" || currToken == "HIJIKEUN" {
-				// Kasus: User langsung nulis GABUNG (Implicit Inner)
-				// Ulah di skip deui, idx geus bener di awal loop
 				idx++
 			} else {
 				return nil, errors.New("sanggeus tipe join kedah aya HIJIKEUN/GABUNG/JOIN")
 			}
 
-			// 2. Ambil Nama Tabel Join
 			if idx >= len(tokens) {
 				return nil, errors.New("tabel join teu disebutkeun")
 			}
 			joinTable := tokens[idx]
 			idx++
 
-			// 3. Cek Keyword ON / DINA
 			if idx >= len(tokens) {
 				return nil, errors.New("join butuh kondisi DINA / ON")
 			}
@@ -198,7 +166,6 @@ func parseSelect(tokens []string) (*Command, error) {
 			}
 			idx++
 
-			// 4. Ambil Kondisi (a = b) -> 3 token
 			if idx+2 >= len(tokens) {
 				return nil, errors.New("kondisi join teu lengkep (col1 = col2)")
 			}
@@ -208,25 +175,21 @@ func parseSelect(tokens []string) (*Command, error) {
 				Operator: tokens[idx+1],
 				Value:    tokens[idx+2],
 			}
-			idx += 3 // Maju 3 langkah
-
-			// Simpan ke struct Command
+			idx += 3
 			cmd.Joins = append(cmd.Joins, JoinClause{
 				Type:      joinType,
 				Table:     joinTable,
 				Condition: joinCond,
 			})
 			
-			continue // Lanjut loop (bisi aya join deui atawa dimana)
+			continue 
 		}
 
-		// --- CLAUSE LAINNYA ---
 		switch token {
 		case "DIMANA", "WHERE":
 			endIdx := len(tokens)
 			for i := idx + 1; i < len(tokens); i++ {
 				kw := strings.ToUpper(tokens[i])
-				// Tambahkan keyword JOIN ke daftar "stop words"
 				if kw == "RUNTUYKEUN" || kw == "ORDER" || kw == "SAKADAR" || kw == "LIMIT" || kw == "LIWATAN" || kw == "OFFSET" || isJoinKeyword(kw) {
 					endIdx = i
 					break
@@ -270,14 +233,13 @@ func parseSelect(tokens []string) (*Command, error) {
 			idx += 2
 
 		default:
-			idx++ // Skip token aneh
+			idx++ 
 		}
 	}
 
 	return cmd, nil
 }
 
-// Helper untuk cek apakah token adalah awal dari JOIN syntax
 func isJoinKeyword(t string) bool {
 	return t == "GABUNG" || t == "JOIN" || 
 	       t == "INNER" ||  t == "HIJIKEUN" || 
@@ -285,17 +247,12 @@ func isJoinKeyword(t string) bool {
 	       t == "RIGHT" || t == "KATUHU"
 }
 
-// ==========================================
-// 4. UPDATE (OMEAN)
-// ==========================================
 func parseUpdate(tokens []string) (*Command, error) {
-	// Format: OMEAN <table> JADI/JANTEN col=val,col=val DIMANA ...
 	
 	if len(tokens) < 4 {
 		return nil, errors.New("format OMEAN salah: OMEAN <table> JADI <col>=<val> DIMANA ...")
 	}
 
-	// Cek Keyword JADI / JANTEN / SET
 	keyword := strings.ToUpper(tokens[2])
 	if keyword != "JADI" && keyword != "JANTEN" && keyword != "SET" {
 		return nil, errors.New("kedah nganggo JADI / JANTEN")
@@ -308,7 +265,6 @@ func parseUpdate(tokens []string) (*Command, error) {
 		Where:   []Condition{},
 	}
 
-	// Cari batas DIMANA
 	whereIdx := -1
 	for i := 3; i < len(tokens); i++ {
 		if strings.ToUpper(tokens[i]) == "DIMANA" || strings.ToUpper(tokens[i]) == "WHERE" {
@@ -317,13 +273,11 @@ func parseUpdate(tokens []string) (*Command, error) {
 		}
 	}
 
-	// Parse Updates (col=val)
 	updateEnd := len(tokens)
 	if whereIdx != -1 {
 		updateEnd = whereIdx
 	}
 
-	// Gabung token update heula bisi aya spasi, terus split koma
 	updatePart := strings.Join(tokens[3:updateEnd], " ")
 	pairs := strings.Split(updatePart, ",")
 	
@@ -334,7 +288,6 @@ func parseUpdate(tokens []string) (*Command, error) {
 		}
 	}
 
-	// Parse DIMANA (Lamun aya)
 	if whereIdx != -1 {
 		conds, err := parseConditionsList(tokens[whereIdx+1:])
 		if err != nil {
@@ -346,16 +299,11 @@ func parseUpdate(tokens []string) (*Command, error) {
 	return cmd, nil
 }
 
-// ==========================================
-// 5. DELETE (MICEUN)
-// ==========================================
 func parseDelete(tokens []string) (*Command, error) {
-	// Format: MICEUN TI <table_name> DIMANA ...
 	if len(tokens) < 3 {
 		return nil, errors.New("format MICEUN salah: MICEUN TI <table> DIMANA ...")
 	}
 
-	// Cek TI / FROM
 	if strings.ToUpper(tokens[1]) != "TI" && strings.ToUpper(tokens[1]) != "FROM" {
 		return nil, errors.New("kedah nganggo TI")
 	}
@@ -366,7 +314,6 @@ func parseDelete(tokens []string) (*Command, error) {
 		Where: []Condition{},
 	}
 
-	// Cek DIMANA
 	if len(tokens) > 3 {
 		if strings.ToUpper(tokens[3]) == "DIMANA" || strings.ToUpper(tokens[3]) == "WHERE" {
 			conds, err := parseConditionsList(tokens[4:])
@@ -382,43 +329,32 @@ func parseDelete(tokens []string) (*Command, error) {
 	return cmd, nil
 }
 
-// ==========================================
-// HELPER: CONDITION PARSER
-// (Dipake ku SELECT, UPDATE, DELETE)
-// ==========================================
 func parseConditionsList(tokens []string) ([]Condition, error) {
 	var conditions []Condition
 	i := 0
 	for i < len(tokens) {
-		// Minimal butuh 3 token: field op value
 		if i+2 >= len(tokens) {
 			break 
 		}
-
 		field := tokens[i]
 		op := tokens[i+1]
 		val := tokens[i+2]
-		
-		// Bersihkeun tanda kutip dina value (misal: 'Asep' -> Asep)
 		val = strings.Trim(val, "'\"")
-
 		cond := Condition{
 			Field:    field,
 			Operator: op,
 			Value:    val,
 		}
-
-		// Cek Logic Operator saenggeusna (SARENG / ATAWA)
 		if i+3 < len(tokens) {
 			logic := strings.ToUpper(tokens[i+3])
 			if logic == "SARENG" || logic == "AND" || logic == "ATAWA" || logic == "OR" {
 				cond.LogicOp = logic
-				i++ // Loncat token logic
+				i++
 			}
 		}
 		
 		conditions = append(conditions, cond)
-		i += 3 // Maju ka kondisi saterusna
+		i += 3 
 	}
 	return conditions, nil
 }

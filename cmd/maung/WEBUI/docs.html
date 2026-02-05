@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MaungDB v2.2.3 Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/public/css/style_docs.css" />
+
+</head>
+<body>
+
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+    <div class="overlay" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar">
+        <div class="brand">🐯 MaungDB Docs</div>
+        <div class="nav-scroll">
+            <a href="#overview" class="nav-item active" onclick="closeSidebar()">Overview</a>
+            <a href="#architecture" class="nav-item" onclick="closeSidebar()">Arsitektur Sistem</a>
+            <a href="#security" class="nav-item" onclick="closeSidebar()">Keamanan & Auth</a>
+            
+            <div class="nav-group">Administrasi</div>
+            <a href="#cli" class="nav-item" onclick="closeSidebar()">CLI Commands</a>
+            <a href="#usermanagement" class="nav-item nav-sub" onclick="closeSidebar()">User Management</a>
+            <a href="#dbmanagement" class="nav-item nav-sub" onclick="closeSidebar()">Database Management</a>
+
+            <div class="nav-group">MaungQL Syntax</div>
+            <a href="#ddl" class="nav-item" onclick="closeSidebar()">DDL & Constraints</a>
+            <a href="#datatypes" class="nav-item nav-sub" onclick="closeSidebar()">Tipe Data</a>
+            <a href="#dml" class="nav-item" onclick="closeSidebar()">Manipulasi Data (CRUD)</a>
+            <a href="#dql" class="nav-item" onclick="closeSidebar()">Query & Joins</a>
+            <a href="#functions" class="nav-item" onclick="closeSidebar()">Fungsi & Agregasi</a>
+        </div>
+    </aside>
+
+    <main>
+        <div class="container">
+            
+            <section id="overview">
+                <h1>MaungDB <span class="badge badge-ent">v2.2.3</span></h1>
+                
+                <p class="lead">
+                    MaungDB adalah <strong>Database Management System (DBMS) Hybrid</strong> yang menggabungkan kesederhanaan penyimpanan berbasis dokumen (flat-file) dengan ketatnya integritas data relasional (RDBMS). 
+                </p>
+                <p>
+                    Dibangun menggunakan bahasa <strong>Go (Golang)</strong>, MaungDB menawarkan performa tinggi dengan bahasa kueri yang unik dan deklaratif berbasis Bahasa Sunda, menjadikannya sistem database yang "membumi" namun bertenaga Enterprise.
+                </p>
+
+                <div class="info-box">
+                    <strong>Fitur Utama v2.2.3:</strong>
+                    <ul>
+                        <li><strong>Strict Schema Enforcement:</strong> Validasi data ketat saat insert/update menggunakan definisi skema terpusat.</li>
+                        <li><strong>Constraint Engine:</strong> Dukungan penuh untuk Primary Key, Foreign Key (Relational Integrity), Unique, dan Not Null.</li>
+                        <li><strong>MaungQL:</strong> Bahasa query intuitif (DAMEL, SIMPEN, TINGALI) yang mudah dipelajari.</li>
+                        <li><strong>Relational Power:</strong> Mendukung INNER, LEFT, dan RIGHT JOIN untuk analisis data kompleks.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="architecture">
+                <h2>🏛️ Arsitektur & Konsep Internal</h2>
+                <p>Memahami bagaimana MaungDB memproses data dari hulu ke hilir.</p>
+
+                <h3>1. Storage Engine (Gudang Data)</h3>
+                <p>
+                    MaungDB menggunakan pendekatan <strong>Hybrid Storage</strong>. Data disimpan dalam format teks yang dapat dibaca manusia (human-readable) namun dengan struktur biner yang terindeks secara logis.
+                </p>
+                <ul>
+                    <li><strong>File .mg (Data):</strong> Setiap tabel adalah satu file fisik. Baris data dipisahkan oleh newline (<code>\n</code>) dan kolom dipisahkan oleh pipe (<code>|</code>). Tidak ada header di file ini untuk efisiensi I/O dan append-only write.</li>
+                    <li><strong>File .schema (Metadata):</strong> Definisi struktur tabel, tipe data, dan constraint (PK/FK) disimpan terpisah dalam format custom text (contoh: <code>id:INT:PK|nama:STRING</code>).</li>
+                    <li><strong>Lokasi:</strong> Semua data tersimpan di folder <code>data/db_{nama_database}/</code>.</li>
+                </ul>
+
+                <h3>2. The Execution Pipeline</h3>
+                <p>Setiap query yang masuk (baik dari CLI maupun Web) melewati tahapan pipeline berikut:</p>
+                
+                <div class="arch-diagram">
+[CLIENT] (Web/CLI) 
+   │  Mengirim Query String
+   ▼
+[PARSER] 
+   │  Menerjemahkan teks "TINGALI..." menjadi AST (Abstract Syntax Tree).
+   │  Mendeteksi Syntax Error (Salah ketik perintah).
+   ▼
+[EXECUTOR] 
+   │  Otak utama. Menentukan strategi eksekusi.
+   │
+   ├── [AUTH CHECK] ──▶ Cek role user (apakah punya akses read/write?).
+   │
+   ├── [SCHEMA LOADER] ──▶ Membaca definisi tabel & tipe data dari .schema.
+   │
+   ├── [VALIDATOR] (Constraint Engine) 
+   │      ├── Cek Tipe Data (Apakah input "ABC" masuk ke kolom INT?)
+   │      ├── Cek Primary Key (Mencegah duplikasi ID)
+   │      └── Cek Foreign Key (Memastikan referensi ID ke tabel induk valid)
+   │
+   ▼
+[STORAGE LAYER] 
+   │  Operasi I/O fisik (Read/Write/Append ke file .mg).
+   │  Menangani locking file untuk konsistensi.
+                </div>
+
+                <h3>3. Validator (Polisi Data)</h3>
+                <p>
+                    Ini adalah fitur unggulan. Sebelum data ditulis ke disk (pada perintah <code>SIMPEN</code> atau <code>OMEAN</code>), Validator akan melakukan <strong>Deep Inspection</strong>:
+                </p>
+                <ul>
+                    <li><strong>PK Check:</strong> Melakukan scan tabel target untuk memastikan ID belum ada.</li>
+                    <li><strong>FK Check:</strong> Jika kolom adalah Foreign Key, sistem akan me-load tabel referensi dan memastikan ID induk ada. Fitur ini bersifat <em>case-insensitive</em> pada nama tabel dan kolom untuk fleksibilitas.</li>
+                </ul>
+            </section>
+
+            <section id="security">
+                <h2>🔐 Keamanan & Autentikasi</h2>
+                <p>MaungDB menerapkan sistem keamanan berbasis <strong>Role-Based Access Control (RBAC)</strong> yang ketat.</p>
+
+                <h3>Hirarki Role (Tingkatan)</h3>
+                <table>
+                    <tr>
+                        <th style="width:150px;">Role</th>
+                        <th>Hak Akses</th>
+                    </tr>
+                    <tr>
+                        <td><code>supermaung</code></td>
+                        <td>
+                            <strong>God Mode.</strong> Bisa melakukan segalanya: membuat user, menghapus database, reset password, dan mengakses semua data tanpa batasan.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>admin</code></td>
+                        <td>
+                            <strong>Schema Manager.</strong> Bisa membuat database (<code>CREATEDB</code>), membuat tabel (<code>DAMEL</code>), dan memodifikasi struktur schema. Tidak bisa memanajemen user lain.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>user</code></td>
+                        <td>
+                            <strong>Data Operator.</strong> Hanya bisa melakukan manipulasi data (CRUD: <code>SIMPEN</code>, <code>TINGALI</code>, <code>OMEAN</code>, <code>MICEUN</code>) pada database yang diizinkan.
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="warn-box">
+                    <strong>Catatan Keamanan:</strong> Password user disimpan menggunakan hash yang aman di sistem file internal. File konfigurasi user tidak boleh diedit secara manual (gunakan perintah CLI).
+                </div>
+            </section>
+
+            <section id="cli">
+                <h2>💻 System CLI Commands</h2>
+                <p>Perintah ini dijalankan langsung dari terminal sistem operasi (bash/cmd), bukan di dalam konsol query SQL.</p>
+
+                <h3 id="usermanagement">User Management (Supermaung Only)</h3>
+                <pre>
+# Membuat user baru
+maung createuser <username> <password> <role>
+Contoh: maung createuser febriansah rahasia123 admin
+
+# Mengganti password user
+maung passwd <username> <password_baru>
+
+# Memberi akses database ke user
+maung setdb <username> <db1,db2>
+Contoh: maung setdb ujang toko,gudang
+
+# Melihat daftar user
+maung listuser</pre>
+
+                <h3 id="dbmanagement">Database Management</h3>
+                <pre>
+# Inisialisasi Sistem (Pertama kali install)
+maung init
+
+# Menjalankan Server Web (Port default 7070)
+maung server 8080
+
+# Membuat Database Fisik
+maung createdb <nama_db>
+
+# Login ke Shell Interaktif
+maung login <user> <pass>
+# Cek siapa yang sedang login
+maung whoami</pre>
+            </section>
+
+            <section id="ddl">
+                <h2>🏗️ Data Definition Language (DDL)</h2>
+                <p>Perintah untuk mendefinisikan struktur data dan skema tabel.</p>
+
+                <h3>DAMEL (Create Table)</h3>
+                <p>Membuat tabel baru dengan definisi kolom yang ketat.</p>
+                <div class="syntax-box">
+                    <code>DAMEL &lt;nama_tabel&gt; &lt;kolom1:TIPE:CONSTRAINT&gt;, &lt;kolom2...&gt;</code>
+                </div>
+
+                <h4>Daftar Constraint (Aturan):</h4>
+                <table>
+                    <tr><th>Constraint</th><th>Kode</th><th>Fungsi</th></tr>
+                    <tr><td>Primary Key</td><td><code>:PK</code></td><td>Data unik & tidak boleh kosong. Wajib ada 1 per tabel.</td></tr>
+                    <tr><td>Foreign Key</td><td><code>:FK(tabel.col)</code></td><td>Data harus ada di kolom tabel lain (Relasi).</td></tr>
+                    <tr><td>Unique</td><td><code>:UNIQUE</code></td><td>Data tidak boleh kembar dalam satu kolom.</td></tr>
+                    <tr><td>Not Null</td><td><code>:NOT NULL</code></td><td>Data wajib diisi (tidak boleh NULL).</td></tr>
+                </table>
+
+                <h4>Contoh Penerapan:</h4>
+<pre>
+1. Tabel Master (Divisi)
+DAMEL divisi id:INT:PK, nama:STRING:UNIQUE
+
+2. Tabel Transaksi (Karyawan) dengan Relasi ke Divisi
+DAMEL karyawan nip:INT:PK, nama:STRING:NOT NULL, id_divisi:INT:FK(divisi.id)
+</pre>
+            </section>
+
+            <section id="datatypes">
+                <h3>💎 Tipe Data (Data Types)</h3>
+                <p>MaungDB mendukung tipe data statis untuk menjaga konsistensi penyimpanan.</p>
+                <table>
+                    <tr><th>Tipe</th><th>Keterangan</th><th>Contoh Valid</th></tr>
+                    <tr><td><code>INT</code></td><td>Bilangan bulat (Integer)</td><td><code>10</code>, <code>-500</code></td></tr>
+                    <tr><td><code>FLOAT</code></td><td>Bilangan desimal (Floating point)</td><td><code>3.14</code>, <code>0.005</code></td></tr>
+                    <tr><td><code>STRING</code></td><td>Teks pendek (Varchar)</td><td><code>"Bandung"</code></td></tr>
+                    <tr><td><code>TEXT</code></td><td>Teks panjang (Paragraph)</td><td><code>"Lorem ipsum..."</code></td></tr>
+                    <tr><td><code>BOOL</code></td><td>Boolean (Logika)</td><td><code>true</code>, <code>false</code></td></tr>
+                    <tr><td><code>DATE</code></td><td>Tanggal (Format ISO YYYY-MM-DD)</td><td><code>2024-08-17</code></td></tr>
+                    <tr><td><code>CHAR(n)</code></td><td>Karakter panjang tetap</td><td><code>CHAR(5)</code> -> "A1234"</td></tr>
+                    <tr><td><code>ENUM(a,b)</code></td><td>Pilihan terbatas (Enumerasi)</td><td><code>ENUM(Pria,Wanita)</code></td></tr>
+                </table>
+            </section>
+
+            <section id="dml">
+                <h2>📝 Data Manipulation Language (DML)</h2>
+                
+                <h3>SIMPEN (Insert)</h3>
+                <p>Menambahkan data baru. Pemisah antar nilai kolom menggunakan pipa (<code>|</code>).</p>
+                <pre>SIMPEN karyawan 101|Febriansah|1</pre>
+                
+                <h3>OMEAN (Update)</h3>
+                <p>Mengubah data yang sudah ada berdasarkan kondisi tertentu.</p>
+                <pre>OMEAN karyawan JADI nama=Febriansah_Baru, id_divisi=2 DIMANA nip=101</pre>
+
+                <h3>MICEUN (Delete)</h3>
+                <p>Menghapus data secara permanen dari tabel.</p>
+                <pre>MICEUN TI karyawan DIMANA nip=101</pre>
+            </section>
+
+            <section id="dql">
+                <h2>👀 Data Query Language (DQL)</h2>
+                <p>Kekuatan utama MaungDB ada pada kemampuan query-nya yang ekspresif dan natural.</p>
+
+                <h3>TINGALI (Select)</h3>
+                <pre>
+- Pilih semua kolom
+TINGALI karyawan
+
+- Pilih kolom tertentu
+TINGALI nama, nip TI karyawan</pre>
+
+                <h3>DIMANA (Filtering) & Logika</h3>
+                <p>Mendukung operator perbandingan: <code>=</code>, <code>!=</code>, <code>></code>, <code><</code>, <code>>=</code>, <code><=</code>.</p>
+                <pre>
+- Kondisi Majemuk (AND/OR)
+TINGALI karyawan DIMANA id_divisi=1 SARENG gaji > 5000000
+
+- Pencarian Teks (Like - Case Insensitive)
+TINGALI karyawan DIMANA nama JIGA 'sep'</pre>
+
+                <h3>RUNTUYKEUN & SAKADAR (Sort & Limit)</h3>
+                <pre>
+- Urutkan gaji dari terbesar (Descending)
+TINGALI karyawan RUNTUYKEUN gaji TI_LUHUR
+
+- Ambil 5 data teratas, lewati 10 data pertama (Pagination)
+TINGALI karyawan SAKADAR 5 LIWATAN 10</pre>
+
+                <h3 id="joins">🔗 Relasi Tabel (JOIN)</h3>
+                <p>Menggabungkan data dari dua tabel atau lebih dalam satu tampilan.</p>
+                
+                <div class="info-box">
+                    <strong>Syntax Join:</strong><br>
+                    <code>GABUNG</code> = Inner Join (Hanya data yang cocok di kedua tabel)<br>
+                    <code>KENCA GABUNG</code> = Left Join (Semua data kiri diambil, data kanan NULL jika tidak cocok)<br>
+                    <code>KATUHU GABUNG</code> = Right Join (Semua data kanan diambil)
+                </div>
+
+                <pre>
+- Menampilkan Nama Karyawan beserta Nama Divisinya
+TINGALI karyawan.nama, divisi.nama 
+TI karyawan 
+GABUNG divisi DINA karyawan.id_divisi = divisi.id</pre>
+            </section>
+
+            <section id="functions">
+                <h2>🧮 Fungsi Agregasi</h2>
+                <p>Melakukan perhitungan statistik pada sekumpulan data.</p>
+                
+                <table>
+                    <tr><th>Fungsi</th><th>Deskripsi</th></tr>
+                    <tr><td><code>JUMLAH()</code></td><td>Menghitung total baris data (Count).</td></tr>
+                    <tr><td><code>TOTAL(kolom)</code></td><td>Menjumlahkan nilai angka pada kolom (Sum).</td></tr>
+                    <tr><td><code>RATA(kolom)</code></td><td>Menghitung rata-rata nilai (Average).</td></tr>
+                    <tr><td><code>PANGGEDENA(kolom)</code></td><td>Mencari nilai terbesar (Max).</td></tr>
+                    <tr><td><code>PANGLEUTIKNA(kolom)</code></td><td>Mencari nilai terkecil (Min).</td></tr>
+                </table>
+
+                <pre>
+- Contoh Analitik Gaji: Total Pegawai, Rata-rata Gaji, Gaji Tertinggi
+TINGALI JUMLAH(), RATA(gaji), PANGGEDENA(gaji) TI karyawan</pre>
+            </section>
+
+            <footer style="margin-top: 100px; padding-top: 30px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.9rem; display: flex; justify-content: space-between;">
+                <div>
+                    &copy; 2026 <strong>MaungDB Inc.</strong><br>
+                    Made with ❤️ & ☕ in Bandung, West Java.
+                </div>
+                <div style="text-align: right;">
+                    Documentation v2.2.3<br>
+                </div>
+            </footer>
+
+        </div>
+    </main>
+
+    <a href="/public/app.html" class="back-btn" title="Back to Maung Studio">←</a>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            if (window.innerWidth <= 900) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.querySelector('.overlay');
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }
+    </script>
+
+</body>
+</html>

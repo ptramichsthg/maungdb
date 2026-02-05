@@ -8,7 +8,6 @@ import (
 	"github.com/febrd/maungdb/internal/config"
 )
 
-// Ambil nama kolom dari file .schema
 func GetColumns(database, table string) ([]string, error) {
 	path := filepath.Join(
 		config.DataDir,
@@ -26,7 +25,6 @@ func GetColumns(database, table string) ([]string, error) {
 		return nil, nil
 	}
 
-	// baris pertama: id:INT|nama:STRING
 	defs := strings.Split(lines[0], "|")
 
 	cols := []string{}

@@ -7,31 +7,26 @@ import (
 	"strings"
 )
 
-// AggregateFunc tipe fungsi matematika
 type AggregateFunc string
 
 const (
-	FuncCount = "JUMLAH"       // COUNT
-	FuncSum   = "TOTAL"        // SUM
-	FuncAvg   = "RATA"         // AVG
-	FuncMax   = "PANGGEDENA"   // MAX
-	FuncMin   = "PANGLEUTIKNA" // MIN
+	FuncCount = "JUMLAH"       
+	FuncSum   = "TOTAL"       
+	FuncAvg   = "RATA"         
+	FuncMax   = "PANGGEDENA"   
+	FuncMin   = "PANGLEUTIKNA" 
 )
 
-// ParsedColumn nyimpen info kolom apakah dia agregasi atau biasa
 type ParsedColumn struct {
 	OriginalText string
 	IsAggregate  bool
 	FuncType     AggregateFunc
-	TargetCol    string // Kolom nu dihitung, misal "gaji" tina RATA(gaji)
+	TargetCol    string 
 }
 
-// ParseColumnSelection: Masingkeun "RATA(gaji)" JANTEN struktur data
 func ParseColumnSelection(rawCol string) ParsedColumn {
 	rawCol = strings.TrimSpace(rawCol)
-	//upper := strings.ToUpper(rawCol)
 
-	// Cek pola FUNGSI(kolom)
 	if strings.Contains(rawCol, "(") && strings.Contains(rawCol, ")") {
 		start := strings.Index(rawCol, "(")
 		end := strings.LastIndex(rawCol, ")")
@@ -62,7 +57,6 @@ func ParseColumnSelection(rawCol string) ParsedColumn {
 		}
 	}
 
-	// Kolom biasa
 	return ParsedColumn{
 		OriginalText: rawCol,
 		IsAggregate:  false,
@@ -70,18 +64,15 @@ func ParseColumnSelection(rawCol string) ParsedColumn {
 	}
 }
 
-// CalculateAggregate: Ngahitung data tina rows
 func CalculateAggregate(rows []map[string]string, parsedCol ParsedColumn) (string, error) {
 	if len(rows) == 0 {
 		return "0", nil
 	}
 
-	// 1. JUMLAH (COUNT) - Teu butuh parsing angka
 	if parsedCol.FuncType == FuncCount {
 		return fmt.Sprintf("%d", len(rows)), nil
 	}
 
-	// Variabel pikeun hitungan
 	var sum float64
 	var count float64
 	var maxVal = -math.MaxFloat64
@@ -90,13 +81,12 @@ func CalculateAggregate(rows []map[string]string, parsedCol ParsedColumn) (strin
 	for _, row := range rows {
 		valStr, ok := row[parsedCol.TargetCol]
 		if !ok {
-			continue // Skip mun kolom euweuh
+			continue 
 		}
 
-		// Convert ka Float
 		val, err := strconv.ParseFloat(valStr, 64)
 		if err != nil {
-			continue // Skip mun lain angka
+			continue 
 		}
 
 		switch parsedCol.FuncType {
@@ -110,7 +100,6 @@ func CalculateAggregate(rows []map[string]string, parsedCol ParsedColumn) (strin
 		}
 	}
 
-	// Return Hasil
 	switch parsedCol.FuncType {
 	case FuncSum:
 		return fmt.Sprintf("%.2f", sum), nil

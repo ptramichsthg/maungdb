@@ -14,36 +14,25 @@ import (
 	
 )
 
-// =======================
-// INIT SYSTEM
-// =======================
-
 var mutex sync.Mutex
 
 
 func Init() error {
-	// main data dir
 	if err := os.MkdirAll(config.DataDir, 0755); err != nil {
 		return err
 	}
 
-	// system dir
 	systemPath := filepath.Join(config.DataDir, config.SystemDir)
 	if err := os.MkdirAll(systemPath, 0755); err != nil {
 		return err
 	}
 
-	// init default user
 	if err := initDefaultUser(systemPath); err != nil {
 		return err
 	}
 
 	return nil
 }
-
-// =======================
-// TABLE PATH RESOLUTION
-// =======================
 
 func tablePath(database, table string) (string, error) {
 	dbPath := filepath.Join(config.DataDir, "db_"+database)
@@ -59,13 +48,8 @@ func tablePath(database, table string) (string, error) {
 		}
 	}
 
-	// default path if table not exist yet
 	return filepath.Join(dbPath, table+config.AllowedExt[0]), nil
 }
-
-// =======================
-// APPEND DATA
-// =======================
 
 func Append(table, data string) error {
 	u, err := auth.CurrentUser()
@@ -116,7 +100,6 @@ func ReadAll(table string) ([]string, error) {
 		return nil, errors.New("table teu kapanggih")
 	}
 	defer file.Close()
-
 	var rows []string
 	sc := bufio.NewScanner(file)
 	for sc.Scan() {
@@ -186,9 +169,6 @@ func Rewrite(table string, rows []string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-// Tambahkan import "encoding/csv" dan "os"
-
-// ExportCSV: Maca data tabel terus dijadikeun file CSV
 func ExportCSV(table string) (string, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -198,7 +178,6 @@ func ExportCSV(table string) (string, error) {
 		return "", err
 	}
 
-	// Ngaran file output sementara
 	filename := filepath.Join(config.DataDir, table+".csv")
 	file, err := os.Create(filename)
 	if err != nil {
@@ -211,7 +190,6 @@ func ExportCSV(table string) (string, error) {
 
 	for _, row := range rows {
 		if row == "" { continue }
-		// MaungDB misahkeun data pake "|", urang ganti jadi Column CSV
 		cols := strings.Split(row, "|")
 		if err := writer.Write(cols); err != nil {
 			return "", err
@@ -221,7 +199,6 @@ func ExportCSV(table string) (string, error) {
 	return filename, nil
 }
 
-// ImportCSV: Maca file CSV terus asupkeun ka tabel (Append)
 func ImportCSV(table string, filePath string) (int, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -237,7 +214,6 @@ func ImportCSV(table string, filePath string) (int, error) {
 
 	count := 0
 	for _, record := range records {
-		// Gabungkeun deui jadi format MaungDB (pake pipa |)
 		rowStr := strings.Join(record, "|")
 		if err := Append(table, rowStr); err == nil {
 			count++

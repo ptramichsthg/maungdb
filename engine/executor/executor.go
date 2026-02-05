@@ -37,37 +37,85 @@ func Execute(cmd *parser.Command) (*ExecutionResult, error) {
 	}
 }
 
-// ==========================================
-// CREATE & INSERT
-// ==========================================
-
 func execCreate(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
 
-	fields := splitColumns(cmd.Data)
+	columns := ParseColumnDefinitions(cmd.Data)
+	if len(columns) == 0 {
+		return nil, errors.New("gagal membuat tabel: tidak ada definisi kolom")
+	}
 
 	perms := map[string][]string{
 		"read":  {"user", "admin", "supermaung"},
 		"write": {"admin", "supermaung"},
 	}
 
-	// 1️⃣ Create schema
-	if err := schema.Create(user.Database, cmd.Table, fields, perms); err != nil {
+	if err := schema.CreateComplex(user.Database, cmd.Table, columns, perms); err != nil {
 		return nil, err
 	}
 
-	// 2️⃣ Create empty .mg file (NO DATA)
 	if err := storage.InitTableFile(user.Database, cmd.Table); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gagal inisialisasi storage: %v", err)
 	}
 
 	return &ExecutionResult{
-		Message: fmt.Sprintf("✅ Tabel '%s' didamel (schema + data siap)", cmd.Table),
+		Message: fmt.Sprintf("✅ Tabel '%s' parantos didamel (Schema + Constraint Siap)", cmd.Table),
 	}, nil
 }
 
+func ParseColumnDefinitions(input string) []schema.Column {
+	var columns []schema.Column
+	
+	rawDefs := splitColumns(input)
 
-// Helper untuk memisahkan kolom CREATE TABLE, menangani koma dalam kurung ENUM(A,B)
+	for _, def := range rawDefs {
+		parts := strings.Split(def, ":")
+		
+		if len(parts) < 2 { continue }
+
+		colName := strings.TrimSpace(parts[0])
+		fullType := strings.ToUpper(strings.TrimSpace(parts[1]))
+		baseType, args := parseTypeAndArgsExecutor(fullType)
+
+		col := schema.Column{
+			Name: colName,
+			Type: baseType,
+			Args: args,
+		}
+
+		if len(parts) > 2 {
+			for _, constraintRaw := range parts[2:] {
+				c := strings.ToUpper(strings.TrimSpace(constraintRaw))
+				switch {
+				case c == "PRIMARY" || c == "PK" || c == "PRIMARY KEY":
+					col.IsPrimary = true; col.IsNotNull = true; col.IsUnique = true
+				case c == "UNIQUE":
+					col.IsUnique = true
+				case c == "NOT NULL" || c == "NOTNULL":
+					col.IsNotNull = true
+				case strings.HasPrefix(c, "FK(") && strings.HasSuffix(c, ")"):
+					inner := c[3 : len(c)-1]
+					col.ForeignKey = inner
+				}
+			}
+		}
+		columns = append(columns, col)
+	}
+	return columns
+}
+
+func parseTypeAndArgsExecutor(fullType string) (string, []string) {
+	idxStart := strings.Index(fullType, "(")
+	idxEnd := strings.LastIndex(fullType, ")")
+	if idxStart == -1 || idxEnd == -1 { return fullType, nil }
+
+	base := fullType[:idxStart]
+	content := fullType[idxStart+1 : idxEnd]
+	rawArgs := strings.Split(content, ",")
+	var args []string
+	for _, a := range rawArgs { args = append(args, strings.TrimSpace(a)) }
+	return base, args
+}
 func splitColumns(input string) []string {
 	var fields []string
 	var currentField strings.Builder
@@ -100,108 +148,71 @@ func splitColumns(input string) []string {
 	return fields
 }
 
+
 func execInsert(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
-
 	s, err := schema.Load(user.Database, cmd.Table)
-	if err != nil {
-		return nil, err
+	if err != nil { return nil, err }
+	if !s.Can(user.Role, "write") { return nil, errors.New("teu boga hak nulis") }
+	if err := s.ValidateRow(cmd.Data); err != nil { return nil, err }
+	if err := ValidateConstraints(s, cmd.Table, cmd.Data); err != nil {
+		return nil, fmt.Errorf("❌ Gagal Simpen: %v", err)
 	}
-
-	if !s.Can(user.Role, "write") {
-		return nil, errors.New("teu boga hak nulis")
-	}
-
-	if err := s.ValidateRow(cmd.Data); err != nil {
-		return nil, err
-	}
-
-	if err := storage.Append(cmd.Table, cmd.Data); err != nil {
-		return nil, err
-	}
-
-	return &ExecutionResult{
-		Message: fmt.Sprintf("✅ Data asup ka table '%s'", cmd.Table),
-	}, nil
+	if err := storage.Append(cmd.Table, cmd.Data); err != nil { return nil, err }
+	return &ExecutionResult{Message: fmt.Sprintf("✅ Data asup ka table '%s'", cmd.Table)}, nil
 }
 
-// ==========================================
-// UPDATE: execSelect (Support JOIN, FILTER, SORT, AGGREGATE)
-// ==========================================
+
 func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 
-	// 1. SETUP & LOAD TABEL UTAMA
-	// ---------------------------
 	user, _ := auth.CurrentUser()
 
-	// Ambil kolom dari schema (SUMBER HEADER YANG BENAR)
-	columns, err := schema.GetColumns(user.Database, cmd.Table)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cek Schema & Izin
 	sMain, err := schema.Load(user.Database, cmd.Table)
 	if err != nil {
-		return nil, fmt.Errorf("gagal maca schema tabel '%s': %v", cmd.Table, err)
+		return nil, fmt.Errorf("tabel '%s' teu kapanggih (pastikeun schema parantos didamel): %v", cmd.Table, err)
 	}
+
 	if !sMain.Can(user.Role, "read") {
 		return nil, errors.New("akses ditolak: anjeun teu boga hak maca tabel ieu")
 	}
 
-	// Baca semua data (TANPA HEADER)
 	mainRaw, err := storage.ReadAll(cmd.Table)
 	if err != nil {
 		return nil, err
 	}
-	if len(mainRaw) == 0 {
-		return &ExecutionResult{Message: "Data kosong"}, nil
-	}
 
-	// === HEADER DARI SCHEMA (BUKAN .mg)
 	var currentHeader []string
-	for _, col := range columns {
+	mainCols := sMain.GetFieldNames()
+	for _, col := range mainCols {
 		currentHeader = append(currentHeader, cmd.Table+"."+col)
 	}
 
-	// === DATA: SEMUA BARIS .mg
 	var currentRows [][]string
 	for _, row := range mainRaw {
-		if row == "" {
-			continue
-		}
+		if strings.TrimSpace(row) == "" { continue }
 		currentRows = append(currentRows, strings.Split(row, "|"))
 	}
 
-	// 2. PROSES JOIN
-	// ---------------------------
+	if len(currentRows) == 0 && len(cmd.Joins) == 0 && !isAggregateCheck(cmd.Fields) {
+		return &ExecutionResult{Columns: sMain.GetFieldNames(), Rows: [][]string{}, Message: "Data kosong"}, nil
+	}
+
 	for _, join := range cmd.Joins {
+		targetSchema, err := schema.Load(user.Database, join.Table)
+		if err != nil { return nil, fmt.Errorf("tabel join '%s' teu kapanggih", join.Table) }
 
 		targetRaw, err := storage.ReadAll(join.Table)
-		if err != nil {
-			return nil, fmt.Errorf("tabel join '%s' teu kapanggih", join.Table)
-		}
-		if len(targetRaw) == 0 {
-			continue
-		}
-
-		// HEADER JOIN DARI SCHEMA
-		targetCols, err := schema.GetColumns(user.Database, join.Table)
-		if err != nil {
-			return nil, err
-		}
+		if err != nil { return nil, err }
 
 		var targetHeaderFull []string
+		targetCols := targetSchema.GetFieldNames()
 		for _, h := range targetCols {
 			targetHeaderFull = append(targetHeaderFull, join.Table+"."+h)
 		}
 
-		// DATA JOIN
 		targetRows := [][]string{}
 		for _, r := range targetRaw {
-			if r != "" {
-				targetRows = append(targetRows, strings.Split(r, "|"))
-			}
+			if strings.TrimSpace(r) != "" { targetRows = append(targetRows, strings.Split(r, "|")) }
 		}
 
 		var nextRows [][]string
@@ -212,12 +223,9 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 
 			for tIdx, rightRow := range targetRows {
 				isMatch := evaluateJoinCondition(
-					leftRow,
-					rightRow,
-					currentHeader,
-					targetHeaderFull,
-					cmd.Table,
-					join.Table,
+					leftRow, rightRow,
+					currentHeader, targetHeaderFull,
+					cmd.Table, join.Table,
 					join.Condition,
 				)
 
@@ -225,30 +233,24 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 					merged := append([]string{}, leftRow...)
 					merged = append(merged, rightRow...)
 					nextRows = append(nextRows, merged)
-
+					
 					matchedLeft = true
 					matchedRightIndices[tIdx] = true
 				}
 			}
 
-			// LEFT JOIN
 			if !matchedLeft && (join.Type == "LEFT" || join.Type == "KENCA") {
 				merged := append([]string{}, leftRow...)
-				for range targetHeaderFull {
-					merged = append(merged, "NULL")
-				}
+				for range targetHeaderFull { merged = append(merged, "NULL") }
 				nextRows = append(nextRows, merged)
 			}
 		}
 
-		// RIGHT JOIN
 		if join.Type == "RIGHT" || join.Type == "KATUHU" {
 			for tIdx, rightRow := range targetRows {
 				if !matchedRightIndices[tIdx] {
 					merged := []string{}
-					for range currentHeader {
-						merged = append(merged, "NULL")
-					}
+					for range currentHeader { merged = append(merged, "NULL") }
 					merged = append(merged, rightRow...)
 					nextRows = append(nextRows, merged)
 				}
@@ -259,8 +261,6 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 		currentHeader = append(currentHeader, targetHeaderFull...)
 	}
 
-	// 3. FILTERING & MAPPING (DIMANA)
-	// ---------------------------
 	var filteredMaps []map[string]string
 	var filteredSlices [][]string
 
@@ -270,11 +270,8 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 			if i < len(currentHeader) {
 				fullKey := currentHeader[i]
 				rowMap[fullKey] = val
-
 				parts := strings.Split(fullKey, ".")
-				if len(parts) > 1 {
-					rowMap[parts[1]] = val
-				}
+				if len(parts) > 1 { rowMap[parts[1]] = val }
 			}
 		}
 
@@ -289,8 +286,6 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 		}
 	}
 
-	// 4. PROSES AGREGASI ATAU QUERY BIASA
-	// ---------------------------
 	selectedFields := cmd.Fields
 	if len(selectedFields) == 0 || selectedFields[0] == "*" {
 		selectedFields = currentHeader
@@ -301,17 +296,13 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 	for _, f := range selectedFields {
 		pc := ParseColumnSelection(f)
 		parsedCols = append(parsedCols, pc)
-		if pc.IsAggregate {
-			isAggregateQuery = true
-		}
+		if pc.IsAggregate { isAggregateQuery = true }
 	}
 
 	var finalResult [][]string
 	var finalHeader []string
 
-	// === CABANG A: QUERY AGREGASI ===
 	if isAggregateQuery {
-
 		var resultRow []string
 		for _, pc := range parsedCols {
 			finalHeader = append(finalHeader, pc.OriginalText)
@@ -321,55 +312,46 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 		finalResult = append(finalResult, resultRow)
 
 	} else {
-		// === CABANG B: QUERY BIASA (SORT, LIMIT, OFFSET) ===
 
-		// B1. Sorting
 		if cmd.OrderBy != "" {
 			colIdx := indexOf(cmd.OrderBy, currentHeader)
 			if colIdx == -1 {
 				for i, h := range currentHeader {
 					if parts := strings.Split(h, "."); len(parts) > 1 && parts[1] == cmd.OrderBy {
-						colIdx = i
-						break
+						colIdx = i; break
 					}
 				}
 			}
 
 			if colIdx != -1 {
 				sort.Slice(filteredSlices, func(i, j int) bool {
-					a, b := filteredSlices[i][colIdx], filteredSlices[j][colIdx]
-					fa, ea := strconv.ParseFloat(a, 64)
-					fb, eb := strconv.ParseFloat(b, 64)
+					valA := filteredSlices[i][colIdx]
+					valB := filteredSlices[j][colIdx]
+					fA, errA := strconv.ParseFloat(valA, 64)
+					fB, errB := strconv.ParseFloat(valB, 64)
 
-					less := false
-					if ea == nil && eb == nil {
-						less = fa < fb
-					} else {
-						less = a < b
-					}
-					if cmd.OrderDesc {
-						return !less
-					}
-					return less
+					isLess := false
+					if errA == nil && errB == nil { isLess = fA < fB } else { isLess = valA < valB }
+					
+					if cmd.OrderDesc { return !isLess }
+					return isLess
 				})
 			}
 		}
 
-		// B2. Pagination
-		total := len(filteredSlices)
-		start, end := 0, total
-		if cmd.Offset > 0 && cmd.Offset < total {
-			start = cmd.Offset
-		}
-		if cmd.Limit > 0 && start+cmd.Limit < total {
-			end = start + cmd.Limit
-		}
-
+		totalRows := len(filteredSlices)
+		start, end := 0, totalRows
+		if cmd.Offset > 0 { start = cmd.Offset; if start > totalRows { start = totalRows } }
+		if cmd.Limit > 0 { end = start + cmd.Limit; if end > totalRows { end = totalRows } }
+		
 		slicedRows := filteredSlices[start:end]
 
-		// B3. Proyeksi
 		for _, pc := range parsedCols {
-			finalHeader = append(finalHeader, pc.TargetCol)
+			displayText := pc.TargetCol
+			if parts := strings.Split(displayText, "."); len(parts) > 1 {
+				displayText = parts[1]
+			}
+			finalHeader = append(finalHeader, displayText)
 		}
 
 		for _, rowSlice := range slicedRows {
@@ -377,9 +359,7 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 			for i, val := range rowSlice {
 				if i < len(currentHeader) {
 					tempMap[currentHeader[i]] = val
-					if p := strings.Split(currentHeader[i], "."); len(p) > 1 {
-						tempMap[p[1]] = val
-					}
+					if p := strings.Split(currentHeader[i], "."); len(p) > 1 { tempMap[p[1]] = val }
 				}
 			}
 
@@ -388,7 +368,17 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 				if val, ok := tempMap[pc.TargetCol]; ok {
 					rowData = append(rowData, val)
 				} else {
-					rowData = append(rowData, "NULL")
+					found := false
+					if !strings.Contains(pc.TargetCol, ".") {
+						for k, v := range tempMap {
+							if strings.HasSuffix(k, "."+pc.TargetCol) {
+								rowData = append(rowData, v)
+								found = true
+								break
+							}
+						}
+					}
+					if !found { rowData = append(rowData, "NULL") }
 				}
 			}
 			finalResult = append(finalResult, rowData)
@@ -396,21 +386,25 @@ func execSelect(cmd *parser.Command) (*ExecutionResult, error) {
 	}
 
 	return &ExecutionResult{
-		Columns: cleanHeaders(finalHeader),
+		Columns: finalHeader,
 		Rows:    finalResult,
-		Message: fmt.Sprintf("%d baris kapanggih", len(finalResult)),
+		Message: fmt.Sprintf("%d baris kapendak", len(finalResult)),
 	}, nil
 }
 
+func isAggregateCheck(fields []string) bool {
+	for _, f := range fields {
+		if strings.Contains(f, "(") && strings.Contains(f, ")") { return true }
+	}
+	return false
+}
 func cleanHeaders(headers []string) []string {
 	seen := map[string]bool{}
 	out := []string{}
 
 	for _, h := range headers {
 		parts := strings.Split(h, ".")
-		col := parts[len(parts)-1] // ambil nama kolom saja
-
-		// Jika duplikat (JOIN tabrakan), fallback ke full name
+		col := parts[len(parts)-1]  
 		if seen[col] {
 			out = append(out, h)
 		} else {
@@ -421,24 +415,14 @@ func cleanHeaders(headers []string) []string {
 	return out
 }
 
-// ==========================================
-// HELPERS (Taruh di bawah file executor.go)
-// ==========================================
-
-// Helper: Cek kondisi ON saat Join
 func evaluateJoinCondition(rowA, rowB []string, headA, headB []string, tblA, tblB string, cond parser.Condition) bool {
-	// Ambil nilai Kiri
 	valA := ""
 	fieldA := cond.Field
-	// Coba cari full match (tabel.kolom)
 	idxA := indexOf(fieldA, headA)
-	// Kalau gak ketemu, coba cari short match (kolom) di tabel A
 	if idxA == -1 {
 		idxA = indexOf(tblA+"."+fieldA, headA)
 	}
 	if idxA != -1 { valA = rowA[idxA] }
-
-	// Ambil nilai Kanan (cond.Value biasanya nama kolom di tabel B)
 	valB := ""
 	fieldB := cond.Value
 	idxB := indexOf(fieldB, headB)
@@ -449,32 +433,27 @@ func evaluateJoinCondition(rowA, rowB []string, headA, headB []string, tblA, tbl
 	if idxB != -1 { 
 		valB = rowB[idxB] 
 	} else {
-		// Jika tidak ketemu di header B, anggap string literal (misal: ON a.id = "1")
 		valB = cond.Value
 	}
 
 	return valA == valB
 }
 
-// Helper: Evaluasi Filter WHERE pada Map
 func evaluateMapCondition(rowMap map[string]string, conditions []parser.Condition) bool {
 	if len(conditions) == 0 { return true }
 
 	check := func(c parser.Condition) bool {
 		valData, ok := rowMap[c.Field]
-		if !ok { return false } // Kolom tidak ditemukan
-		return match(valData, c.Operator, c.Value, "STRING") // Auto detect string/number inside match
+		if !ok { return false } 
+		return match(valData, c.Operator, c.Value, "STRING") 
 	}
 
 	result := check(conditions[0])
-
 	for i := 0; i < len(conditions)-1; i++ {
 		cond := conditions[i]
 		if cond.LogicOp == "" { break }
-		
 		nextRes := check(conditions[i+1])
 		op := strings.ToUpper(cond.LogicOp)
-		
 		if op == "SARENG" || op == "AND" {
 			result = result && nextRes
 		} else if op == "ATAWA" || op == "OR" {
@@ -484,9 +463,6 @@ func evaluateMapCondition(rowMap map[string]string, conditions []parser.Conditio
 	return result
 }
 
-// ==========================================
-// UPDATE (OMEAN) - Fixed Logic Filter
-// ==========================================
 func execUpdate(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
 	s, err := schema.Load(user.Database, cmd.Table)
@@ -509,7 +485,6 @@ func execUpdate(cmd *parser.Command) (*ExecutionResult, error) {
 		if raw == "" { continue }
 		cols := strings.Split(raw, "|")
 
-		// --- LOGIKA FILTER (Sama dengan execSelect) ---
 		shouldUpdate := true
 		if len(cmd.Where) > 0 {
 			shouldUpdate = evaluateOne(cols, s.Columns, cmd.Where[0])
@@ -546,9 +521,6 @@ func execUpdate(cmd *parser.Command) (*ExecutionResult, error) {
 	return &ExecutionResult{Message: fmt.Sprintf("✅ %d data geus diomean", updatedCount)}, nil
 }
 
-// ==========================================
-// DELETE (MICEUN) - Fixed Logic Filter
-// ==========================================
 func execDelete(cmd *parser.Command) (*ExecutionResult, error) {
 	user, _ := auth.CurrentUser()
 	s, err := schema.Load(user.Database, cmd.Table)
@@ -571,7 +543,6 @@ func execDelete(cmd *parser.Command) (*ExecutionResult, error) {
 		if raw == "" { continue }
 		cols := strings.Split(raw, "|")
 
-		// --- LOGIKA FILTER (Sama dengan execSelect) ---
 		shouldDelete := true
 		if len(cmd.Where) > 0 {
 			shouldDelete = evaluateOne(cols, s.Columns, cmd.Where[0])
@@ -602,10 +573,6 @@ func execDelete(cmd *parser.Command) (*ExecutionResult, error) {
 
 	return &ExecutionResult{Message: fmt.Sprintf("✅ %d data geus dipiceun", deletedCount)}, nil
 }
-
-// ==========================================
-// HELPERS
-// ==========================================
 
 func indexOf(field string, fields []string) int {
 	for i, f := range fields {

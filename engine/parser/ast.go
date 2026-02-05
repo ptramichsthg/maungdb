@@ -11,9 +11,9 @@ const (
 )
 
 type JoinClause struct {
-    Type      string // "INNER", "LEFT", "RIGHT"
-    Table     string // Tabel nu rek digabung (misal: divisi)
-    Condition Condition // Kondisi ON (misal: pegawai.divisi_id = divisi.id)
+    Type      string
+    Table     string 
+    Condition Condition 
 }
 
 type Command struct {

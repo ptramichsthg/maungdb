@@ -6,22 +6,18 @@ import (
 	"net/http"
 )
 
-// serveWebUI registers embedded web UI routes
 func serveWebUI() {
 	sub, err := fs.Sub(webFS, "WEBUI")
 	if err != nil {
 		panic(err)
 	}
-
-	// Static assets: /static/*
-	http.Handle("/static/",
+	http.Handle("/public/",
 		http.StripPrefix(
-			"/static/",
+			"/public/",
 			http.FileServer(http.FS(sub)),
 		),
 	)
 
-	// Root: /
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -36,8 +32,6 @@ func serveWebUI() {
 		defer f.Close()
 
 		w.Header().Set("Content-Type", "text/html")
-
-		// ⬇️ INI FIX UTAMANYA
 		_, _ = io.Copy(w, f)
 	})
 }
