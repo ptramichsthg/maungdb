@@ -51,6 +51,7 @@ type CreateSchemaRequest struct {
 	Table  string   `json:"table"`
 	Fields []string `json:"fields"` // PENTING: Tipe datana []string (Array)
 }
+
 // ===========================
 // Server Entry Point
 // ===========================
@@ -70,6 +71,9 @@ func startServer(port string) {
 
 	http.HandleFunc("/schema/create", handleSchemaCreate)
 	http.HandleFunc("/query", handleQuery)
+
+	// ---- AI ASSISTANT ----
+	http.HandleFunc("/ai/chat", handleAIChat)
 
 	// ---- EMBEDDED WEB UI ----
 	serveWebUI()
@@ -234,8 +238,6 @@ func handleUse(w http.ResponseWriter, r *http.Request) {
 // ===========================
 // SCHEMA HANDLER
 // ===========================
-
-
 
 // 2. Tambahkeun Handler na
 func handleSchemaCreate(w http.ResponseWriter, r *http.Request) {
