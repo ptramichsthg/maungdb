@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MaungDB - Login</title>
-  <link rel="stylesheet" href="/static/css/style_login.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>MaungDB - The Local Pride Database</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/style_login.css" />
+
 </head>
 <body>
 
   <canvas id="particle-canvas"></canvas>
 
   <nav class="navbar">
-    <a href="#" class="brand">🐯 Maung Studio</a>
+    <a href="#" class="brand">🐯 MaungDB</a>
     <div class="nav-links">
       <a href="/public/docs.html" class="nav-item">Documentation</a>
       <a href="https://github.com/febrd/maungdb" target="_blank" class="nav-item">GitHub</a>
@@ -46,7 +47,7 @@
       <form onsubmit="event.preventDefault(); login();">
         <div class="form-group">
           <label for="username">Username</label>
-          <input type="text" id="username" placeholder="Username" required />
+          <input type="text" id="username" placeholder="maung" required />
         </div>
         
         <div class="form-group">
@@ -63,13 +64,11 @@
   <script src="/public/js/auth.js"></script>
 
   <script>
-    // --- 1. MODAL LOGIC (ONBOARDING FLOW) ---
     const modal = document.getElementById('loginModal');
     const usernameInput = document.getElementById('username');
 
     function openLogin() {
         modal.classList.add('active');
-        // Fokus otomatis ke input username setelah animasi selesai sedikit
         setTimeout(() => usernameInput.focus(), 100);
     }
 
@@ -77,14 +76,12 @@
         modal.classList.remove('active');
     }
 
-    // Tutup modal jika klik di luar area kartu (overlay gelap)
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeLogin();
         }
     });
 
-    // Tutup modal dengan tombol ESC
     document.addEventListener('keydown', (e) => {
         if (e.key === "Escape" && modal.classList.contains('active')) {
             closeLogin();
@@ -92,7 +89,6 @@
     });
 
 
-    // --- 2. PARTICLE ANIMATION ---
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
@@ -105,9 +101,8 @@
             this.x = Math.random() * canvas.width;
             this.y = Math.random() * canvas.height;
             this.size = Math.random() * 2.5 + 0.5;
-            this.speedX = Math.random() * 0.5 - 0.25; // Slow movement
+            this.speedX = Math.random() * 0.5 - 0.25;
             this.speedY = Math.random() * 0.5 - 0.25;
-            // Warna Orange Maung dengan opacity random
             this.color = 'rgba(245, 158, 11, ' + (Math.random() * 0.4 + 0.1) + ')'; 
         }
         update() {
@@ -128,7 +123,7 @@
 
     function initParticles() {
         particlesArray = [];
-        const numberOfParticles = 100; // Lebih banyak partikel
+        const numberOfParticles = 100;
         for (let i = 0; i < numberOfParticles; i++) {
             particlesArray.push(new Particle());
         }

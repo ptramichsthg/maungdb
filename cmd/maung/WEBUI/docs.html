@@ -38,13 +38,14 @@
         <div class="container">
             
             <section id="overview">
-                <h1>MaungDB <span class="badge badge-ent">v2.2.3</span></h1>
-                
+                <h1>MaungDB  <span class="badge badge-ent">v2.2.3</span></h1>
+                <img src="https://github.com/febrd/maungdb/blob/main/logonya.png" alt="Logo MaungDB" width="700">
+
                 <p class="lead">
                     MaungDB adalah <strong>Database Management System (DBMS) Hybrid</strong> yang menggabungkan kesederhanaan penyimpanan berbasis dokumen (flat-file) dengan ketatnya integritas data relasional (RDBMS). 
                 </p>
                 <p>
-                    Dibangun menggunakan bahasa <strong>Go (Golang)</strong>, MaungDB menawarkan performa tinggi dengan bahasa kueri yang unik dan deklaratif berbasis Bahasa Sunda, menjadikannya sistem database yang "membumi" namun bertenaga Enterprise.
+                    Dibangun menggunakan bahasa <strong>Go (Golang)</strong>, MaungDB menawarkan performa tinggi dengan bahasa kueri yang unik dan deklaratif berbasis Bahasa Sunda, menjadikannya sistem database yang "membumi" namun bertenaga .
                 </p>
 
                 <div class="info-box">
@@ -103,7 +104,7 @@
 
                 <h3>3. Validator (Polisi Data)</h3>
                 <p>
-                    Ini adalah fitur unggulan. Sebelum data ditulis ke disk (pada perintah <code>SIMPEN</code> atau <code>OMEAN</code>), Validator akan melakukan <strong>Deep Inspection</strong>:
+                    Ini adalah fitur unggulan versi . Sebelum data ditulis ke disk (pada perintah <code>SIMPEN</code> atau <code>OMEAN</code>), Validator akan melakukan <strong>Deep Inspection</strong>:
                 </p>
                 <ul>
                     <li><strong>PK Check:</strong> Melakukan scan tabel target untuk memastikan ID belum ada.</li>
@@ -204,10 +205,10 @@ maung whoami</pre>
 
                 <h4>Contoh Penerapan:</h4>
 <pre>
-1. Tabel Master (Divisi)
+// 1. Tabel Master (Divisi)
 DAMEL divisi id:INT:PK, nama:STRING:UNIQUE
 
-2. Tabel Transaksi (Karyawan) dengan Relasi ke Divisi
+// 2. Tabel Transaksi (Karyawan) dengan Relasi ke Divisi
 DAMEL karyawan nip:INT:PK, nama:STRING:NOT NULL, id_divisi:INT:FK(divisi.id)
 </pre>
             </section>
@@ -250,27 +251,27 @@ DAMEL karyawan nip:INT:PK, nama:STRING:NOT NULL, id_divisi:INT:FK(divisi.id)
 
                 <h3>TINGALI (Select)</h3>
                 <pre>
-- Pilih semua kolom
+// Pilih semua kolom
 TINGALI karyawan
 
-- Pilih kolom tertentu
+// Pilih kolom tertentu
 TINGALI nama, nip TI karyawan</pre>
 
                 <h3>DIMANA (Filtering) & Logika</h3>
                 <p>Mendukung operator perbandingan: <code>=</code>, <code>!=</code>, <code>></code>, <code><</code>, <code>>=</code>, <code><=</code>.</p>
                 <pre>
-- Kondisi Majemuk (AND/OR)
+// Kondisi Majemuk (AND/OR)
 TINGALI karyawan DIMANA id_divisi=1 SARENG gaji > 5000000
 
-- Pencarian Teks (Like - Case Insensitive)
+// Pencarian Teks (Like - Case Insensitive)
 TINGALI karyawan DIMANA nama JIGA 'sep'</pre>
 
                 <h3>RUNTUYKEUN & SAKADAR (Sort & Limit)</h3>
                 <pre>
-- Urutkan gaji dari terbesar (Descending)
+// Urutkan gaji dari terbesar (Descending)
 TINGALI karyawan RUNTUYKEUN gaji TI_LUHUR
 
-- Ambil 5 data teratas, lewati 10 data pertama (Pagination)
+// Ambil 5 data teratas, lewati 10 data pertama (Pagination)
 TINGALI karyawan SAKADAR 5 LIWATAN 10</pre>
 
                 <h3 id="joins">🔗 Relasi Tabel (JOIN)</h3>
@@ -284,7 +285,7 @@ TINGALI karyawan SAKADAR 5 LIWATAN 10</pre>
                 </div>
 
                 <pre>
-- Menampilkan Nama Karyawan beserta Nama Divisinya
+// Menampilkan Nama Karyawan beserta Nama Divisinya
 TINGALI karyawan.nama, divisi.nama 
 TI karyawan 
 GABUNG divisi DINA karyawan.id_divisi = divisi.id</pre>
@@ -304,7 +305,7 @@ GABUNG divisi DINA karyawan.id_divisi = divisi.id</pre>
                 </table>
 
                 <pre>
-- Contoh Analitik Gaji: Total Pegawai, Rata-rata Gaji, Gaji Tertinggi
+// Contoh Analitik Gaji: Total Pegawai, Rata-rata Gaji, Gaji Tertinggi
 TINGALI JUMLAH(), RATA(gaji), PANGGEDENA(gaji) TI karyawan</pre>
             </section>
 
@@ -315,6 +316,7 @@ TINGALI JUMLAH(), RATA(gaji), PANGGEDENA(gaji) TI karyawan</pre>
                 </div>
                 <div style="text-align: right;">
                     Documentation v2.2.3<br>
+                     Edition
                 </div>
             </footer>
 
@@ -332,6 +334,7 @@ TINGALI JUMLAH(), RATA(gaji), PANGGEDENA(gaji) TI karyawan</pre>
         }
 
         function closeSidebar() {
+            // Hanya jalankan jika di mode mobile
             if (window.innerWidth <= 900) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.querySelector('.overlay');
