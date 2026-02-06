@@ -98,7 +98,7 @@ class AIAssistant {
                   </button>
                   
                   <!-- Dropdown Menu -->
-                  <div id="ai-menu-dropdown" class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 p-1 z-50 animate-in fade-in zoom-in-95 duration-200">
+                  <div id="ai-menu-dropdown" class="hidden absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 p-1 z-50 animate-pop-in">
                       <button id="ai-new-chat-btn" class="w-full text-left px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 transition-colors">
                           <i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i>
                           <span>Clear History & New Chat</span>
@@ -185,7 +185,7 @@ class AIAssistant {
   showWelcome() {
     const messagesDiv = document.getElementById('ai-chat-messages');
     messagesDiv.innerHTML = `
-      <div class="flex flex-col items-center justify-center py-8 text-center ai-welcome animate-in zoom-in-95 duration-500">
+      <div class="flex flex-col items-center justify-center py-8 text-center ai-welcome animate-[popIn_0.5s_ease-out]">
         <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 mb-4 transform rotate-3 hover:rotate-6 transition-transform">
           <i data-lucide="bot" class="w-8 h-8"></i>
         </div>
@@ -280,7 +280,7 @@ class AIAssistant {
 
     const isUser = role === 'user';
     const messageDiv = document.createElement('div');
-    messageDiv.className = `flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} animate-in fade-in slide-in-from-bottom-2 duration-300`;
+    messageDiv.className = `flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} animate-slide-up`;
 
     // Avatar
     const avatarHtml = isUser
@@ -352,7 +352,7 @@ class AIAssistant {
     const messagesDiv = document.getElementById('ai-chat-messages');
 
     const typingHTML = `
-      <div id="ai-typing" class="flex gap-3 flex-row animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div id="ai-typing" class="flex gap-3 flex-row animate-slide-up">
         <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center shrink-0 shadow-md">
            <i data-lucide="bot" class="w-4 h-4 text-white"></i>
         </div>
@@ -378,7 +378,7 @@ class AIAssistant {
   showError(msg) {
     const messagesDiv = document.getElementById('ai-chat-messages');
     const errHTML = `
-      <div class="flex justify-center animate-in fade-in zoom-in duration-300">
+      <div class="flex justify-center animate-pop-in">
         <div class="bg-red-50 text-red-600 text-xs py-2 px-3 rounded-lg border border-red-100 flex items-center gap-2">
           <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
           <span>${msg}</span>

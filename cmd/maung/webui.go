@@ -1,10 +1,14 @@
 package main
 
 import (
+	"embed"
 	"io"
 	"io/fs"
 	"net/http"
 )
+
+//go:embed WEBUI/*
+var webFS embed.FS
 
 // serveWebUI registers embedded web UI routes
 func serveWebUI() {

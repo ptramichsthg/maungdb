@@ -288,4 +288,3 @@
     .maung-table tbody tr:nth-child(even) { background-color: #f8fafc; }
     .maung-table tbody tr:hover { background-color: #e0e7ff; transition: background-color 0.15s ease; }
     .result-footer { background-color: #f1f5f9; padding: 10px 16px; font-size: 0.8rem; color: #64748b; display: flex; justify-content: space-between; border-top: 1px solid var(--border); }
-  
